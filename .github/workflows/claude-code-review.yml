@@ -1,0 +1,48 @@
+name: Claude PR Review
+
+# PR이 열리거나 새 커밋이 push될 때 멘션 없이 자동으로 Claude가 코드리뷰한다.
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            이 저장소(kei781/code-reviewer-agent)의 이 PR을 한국어로 코드리뷰하라.
+            먼저 루트의 ADR.md / PRD.md / AGENTS.md 를 읽고 그 정책 기준으로 검토한다.
+
+            중점 점검 항목:
+            - SQL safety gate 우회 / catalog allowlist 위반 / 임의 테이블·컬럼 접근 가능성
+            - LIMIT 기본값·상한 처리, LLM output이 검증 없이 DB query로 전달되는 경로
+            - Reviewer(R) / Fixer(F) 역할 분리 위반, 숨은 실행 컨텍스트·self-review 공유
+            - auto-merge / write-token 루프 / fork-PR secret 접근 / branch-protection 우회처럼
+              해당 phase에서 명시적으로 허용되지 않은 동작의 도입 여부
+            - 의존성 방향 위반: src/domain 이 app·adapters·SDK·process.env·네트워크·셸에 의존하는지
+            - 테스트 커버리지: 규칙·정책·상태전이·파싱 로직에 대한 테스트 유무와
+              테스트 러너가 실제로 테스트를 실행하는지(no-op 여부)
+
+            발견 사항은 심각도(Critical / Minor / Nit)로 분류하고, 가능하면 해당
+            파일·라인을 인용해 구체적 수정안을 제시하라. 단순 칭찬은 줄이고 실질 문제에 집중하라.
+
+          # 리뷰 중 빌드/테스트까지 직접 돌려 검증하게 하려면 아래 주석을 해제:
+          # (이 repo의 'node --test dist' no-op 같은 문제를 자동으로 잡아낼 수 있음)
+          # claude_args: |
+          #   --allowed-tools "Bash(npm ci),Bash(npm install),Bash(npm run check),Bash(npm run test),Bash(npm run build),Bash(npm run typecheck)"
