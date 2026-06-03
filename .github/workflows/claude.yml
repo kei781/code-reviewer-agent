@@ -37,7 +37,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           # Anthropic API 키 사용 (콘솔에서 발급, 사용량 과금)
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # 구독(Pro/Max) OAuth 토큰을 쓰려면 위 줄을 지우고 아래 줄을 사용:
-          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
