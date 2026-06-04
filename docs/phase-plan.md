@@ -1,6 +1,6 @@
 # Implementation Phase Plan
 
-This plan is derived from the latest root `ADR.md` and `PRD.md` dated 2026-06-03. Each phase must be implemented in its own pull request. The next phase may start only after all review comments on the previous phase PR are resolved.
+This plan is derived from the latest root `ADR.md` and `PRD.md`. Each phase must be implemented in its own pull request. The next phase may start only after all review comments on the previous phase PR are resolved.
 
 ## Phase 0 — Repository structure and agent guardrails
 
