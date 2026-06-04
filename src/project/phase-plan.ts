@@ -87,6 +87,6 @@ export const implementationPhases = [
   },
 ] as const satisfies readonly PhaseDefinition[];
 
-export function getNextBlockedPhase(): PhaseDefinition | undefined {
+export function getFirstBlockedPhase(): PhaseDefinition | undefined {
   return implementationPhases.find((phase) => phase.status === "blocked-until-pr-comments-resolved");
 }
