@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { directoryRules, getNextBlockedPhase, implementationPhases } from "../../index.js";
+import { directoryRules, getFirstBlockedPhase, implementationPhases } from "../../index.js";
 
 describe("implementation phase plan", () => {
   it("keeps phase identifiers unique and ordered", () => {
@@ -10,10 +10,16 @@ describe("implementation phase plan", () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
-  it("blocks the next phase until phase 0 PR comments are resolved", () => {
-    const nextBlockedPhase = getNextBlockedPhase();
+  it("marks phase 0 as the current implementation phase", () => {
+    const currentPhase = implementationPhases.find((phase) => phase.id === "phase-0");
 
-    assert.equal(nextBlockedPhase?.id, "phase-1");
+    assert.equal(currentPhase?.status, "implementing");
+  });
+
+  it("blocks the first future phase until phase 0 PR comments are resolved", () => {
+    const firstBlockedPhase = getFirstBlockedPhase();
+
+    assert.equal(firstBlockedPhase?.id, "phase-1");
   });
 });
 
