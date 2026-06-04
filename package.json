@@ -1,0 +1,20 @@
+{
+  "name": "code-reviewer-agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontier Pair 기반 AI PR 리뷰·수정·수렴 파이프라인 구현 저장소",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"dist/**/*.test.js\"",
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm run build && npm run test"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.12.4",
+    "typescript": "5.9.3"
+  }
+}
