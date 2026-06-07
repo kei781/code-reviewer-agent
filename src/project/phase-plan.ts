@@ -16,28 +16,30 @@ export const implementationPhases = [
     id: "phase-0",
     title: "Repository structure and agent guardrails",
     description:
-      "Create a clear TypeScript project structure and durable agent rules before implementing runtime automation.",
+      "Create a clear TypeScript project structure, setup automation, logging, and durable agent rules before implementing runtime automation.",
     sourceRequirement: "User-requested phase0 plus ADR/PRD P0 readiness guidance",
     status: "implementing",
     deliverables: [
       "Strict TypeScript baseline",
       "Human-readable source directory boundaries",
+      "Setup command for required local project infrastructure",
+      "Central log() helper for replaceable logging",
       "Future-agent guardrails in AGENTS.md",
       "Phase plan documenting PR-by-PR progression",
     ],
   },
   {
     id: "phase-1",
-    title: "P0 Reviewer Signal MVP",
+    title: "P0 Review-server Cross-validation MVP",
     description:
-      "Review same-repo PRs and publish structured review comments without formal approval, autofix, or merge automation.",
-    sourceRequirement: "ADR/PRD P0 Reviewer Signal MVP",
+      "Receive PR webhooks on the review server, prepare a local checkout, run independent Claude Code/Codex reviews, and publish only codebase-validated findings.",
+    sourceRequirement: "ADR/PRD P0 Review-server Cross-validation MVP",
     status: "blocked-until-pr-comments-resolved",
     deliverables: [
-      "Same-repo PR guard",
-      "Structured review signal schema",
-      "Reviewer prompt contract",
-      "Review comment renderer and tests",
+      "Webhook intake port",
+      "Local git workspace adapter",
+      "Independent reviewer pass adapters",
+      "Codebase-backed cross-validation and PR comment posting",
     ],
   },
   {
