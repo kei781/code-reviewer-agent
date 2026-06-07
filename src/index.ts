@@ -70,3 +70,34 @@ export type {
   ReviewWorkspacePort,
   WorkspacePreparationRequest
 } from "./app/runEnsembleReview.js";
+
+export {
+  followUpAllowedResponseActions,
+  followUpBlockingLabels,
+  respondToReviewerMention
+} from "./app/respondToReviewerMention.js";
+export type {
+  FollowUpBlockingLabel,
+  FollowUpClaimResult,
+  FollowUpFailurePublication,
+  FollowUpFailureRecord,
+  FollowUpFailureStage,
+  FollowUpPublisherPort,
+  FollowUpRespondedRecord,
+  FollowUpResponderPort,
+  FollowUpResponse,
+  FollowUpResponseAction,
+  FollowUpResponsePublication,
+  FollowUpResponseRequest,
+  FollowUpResponseScope,
+  FollowUpRunResult,
+  FollowUpSkipPublication,
+  FollowUpSkipReason,
+  FollowUpStateKey,
+  FollowUpStateRecord,
+  FollowUpStateStorePort,
+  ReviewerMentionCommentAction,
+  ReviewerMentionCommentEvent,
+  ReviewerMentionPorts,
+  ReviewerTriggerAlias
+} from "./app/respondToReviewerMention.js";

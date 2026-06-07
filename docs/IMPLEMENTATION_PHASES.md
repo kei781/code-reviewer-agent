@@ -47,7 +47,26 @@ Exit criteria:
 - Review output contains reviewed SHA, agent identity, kept/dropped finding counts, and merge signal metadata.
 - Human approve/merge remains required.
 
-## Phase 2: P1 Frontier Pair Autofix Pilot
+## Phase 2: P0 Follow-up Reviewer Interactions
+
+Title: `P0: Add explicit reviewer follow-up interactions`
+
+Scope:
+
+- Respond to `issue_comment` created/edited events only when a configured reviewer trigger is present.
+- Reuse the P0 same-repo/open PR guard and skip fork/closed/non-PR targets before side effects.
+- Claim each delivery/comment/head-SHA pair before model or publisher calls.
+- Keep the response contract analysis-only: explanation, risk clarification, and re-review signal are allowed; code changes, approval, merge, and write-token behavior are not.
+- Publish skip and failure records through ports so concrete GitHub adapters can record audit trail later.
+
+Exit criteria:
+
+- Configured triggers create response publications.
+- Ordinary comments do not auto-respond.
+- Fix/merge requests remain read-only responses in P0.
+- Duplicate comment/head-SHA claims are skipped before response generation.
+
+## Phase 3: P1 Frontier Pair Autofix Pilot
 
 Title: `P1: Add opt-in fixer convergence loop`
 
@@ -66,7 +85,7 @@ Exit criteria:
 - Fixer attempts are capped.
 - Loops end as `CONVERGED_CLEAN`, `STALLED_OSCILLATING`, or `CAPPED_WITH_OPEN`.
 
-## Phase 3: P2-H Conservative Merge Gate
+## Phase 4: P2-H Conservative Merge Gate
 
 Title: `P2-H: Add human-gated AI merge verdict`
 
@@ -80,6 +99,6 @@ Exit criteria:
 
 - The merge gate never bypasses required checks, branch protection, human review, fork/risky-path blocks, or blocking labels.
 
-## Phase 4: P2-A and P3 Advanced Operations
+## Phase 5: P2-A and P3 Advanced Operations
 
 P2-A requires a separate ADR amendment before any autonomous low-risk merge behavior. P3 may add operations features such as thread tracking, reporting, alerts, cost summaries, and recovery workflows after the earlier phases are stable.
