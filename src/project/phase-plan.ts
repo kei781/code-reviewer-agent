@@ -48,7 +48,7 @@ export const implementationPhases = [
     description:
       "Respond to explicit reviewer mentions or commands while keeping review signals separate from approval.",
     sourceRequirement: "ADR/PRD explicit reviewer follow-up requirement",
-    status: "implementing",
+    status: "implemented",
     deliverables: ["Mention parser", "Follow-up response contract", "SHA-aware dedupe tests"],
   },
   {
@@ -57,8 +57,8 @@ export const implementationPhases = [
     description:
       "Allow opt-in fixer analysis for actionable blockers while keeping model patch generation separate from write-token apply jobs.",
     sourceRequirement: "ADR/PRD P1 optional fixer autofix",
-    status: "planned",
-    deliverables: ["Actionable marker schema", "Patch artifact contract", "Apply policy gates"],
+    status: "implementing",
+    deliverables: ["Actionable marker schema", "Model-pair independence gate", "Autofix eligibility policy"],
   },
   {
     id: "phase-4",

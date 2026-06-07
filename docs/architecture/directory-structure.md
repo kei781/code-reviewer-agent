@@ -40,6 +40,8 @@ Concrete webhook, GitHub, git, sandbox, state, and model calls belong behind por
 
 Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToReviewerMention` accepts typed `issue_comment` data, uses the pure trigger policy for `@ai-reviewer`, `@claude`, and `/ai review`, rejects non-PR, closed, fork, and `ai-blocked` targets before response side effects, atomically claims the comment/head-SHA/body-revision tuple, and asks an injected responder only for analysis, explanation, risk clarification, or re-review signals. Concrete comment posting, model execution, persistence, and raw GitHub `issue_comment` enrichment remain adapter responsibilities; adapters must load PR metadata such as head SHA and fork status before calling the use case.
 
+Phase 3 adds only pure P1 policy contracts. `src/domain/fixer` owns reviewer actionable marker parsing for future fixer inputs, while `src/domain/policy` owns model-pair independence and `ai-autofix` eligibility. These modules decide whether a future adapter may start a read-only fixer analyze pass; they do not create patches, apply patches, push commits, approve, merge, or bypass CI.
+
 ## Dependency Rules
 
 ```text

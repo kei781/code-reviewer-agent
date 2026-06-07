@@ -16,6 +16,24 @@ export { decideP0ReviewerEligibility } from "./domain/policy/pullRequestPolicy.j
 export type { PolicyDecision, PullRequestPolicyInput } from "./domain/policy/pullRequestPolicy.js";
 export { evaluateRiskyPaths, riskyPathPatterns } from "./domain/policy/riskyPathPolicy.js";
 export type { RiskyPathDecision, RiskyPathMatch, RiskyPathSeverity } from "./domain/policy/riskyPathPolicy.js";
+export { extractActionableMarkers } from "./domain/fixer/actionableMarker.js";
+export type { ActionableMarker, ActionableSeverity } from "./domain/fixer/actionableMarker.js";
+export { decideModelPairIndependence } from "./domain/policy/modelPairPolicy.js";
+export type {
+  ModelIdentity,
+  ModelPairBlockReason,
+  ModelPairPolicyDecision,
+  ModelPairPolicyInput,
+  ModelPairWarning
+} from "./domain/policy/modelPairPolicy.js";
+export { decideAutofixEligibility } from "./domain/policy/autofixPolicy.js";
+export type {
+  AutofixBlockReason,
+  AutofixNextAction,
+  AutofixPolicyDecision,
+  AutofixPolicyInput,
+  AutofixRecommendedLabel
+} from "./domain/policy/autofixPolicy.js";
 export { reviewSummaryMarker, orchestratorStateMarkerPrefix, renderReviewMarkers } from "./domain/review/reviewMarker.js";
 export type { ReviewConvergenceState, ReviewMarkerMetadata } from "./domain/review/reviewMarker.js";
 export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/reviewerTriggerPolicy.js";
