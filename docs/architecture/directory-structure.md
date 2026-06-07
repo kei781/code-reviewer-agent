@@ -42,6 +42,8 @@ Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToR
 
 Phase 3 adds only pure P1 policy contracts. `src/domain/fixer` owns reviewer actionable marker parsing for future fixer inputs, while `src/domain/policy` owns model-pair independence and `ai-autofix` eligibility. Actionable marker parsing requires a trusted reviewer summary source so adapters cannot pass arbitrary PR bodies, user comments, or repository content into the fixer contract. These modules decide whether a future adapter may start a read-only fixer analyze pass; they do not create patches, apply patches, push commits, approve, merge, or bypass CI.
 
+Phase 4 keeps the P1 loop contract in the domain layer. `src/domain/convergence` owns terminal-state decisions for delta verification, round caps, and oscillation detection, while `src/domain/review/orchestratorStateMarker.ts` parses hidden `ai-orchestrator` PR comment markers into typed state. These contracts let future adapters persist and recover loop state without moving GitHub comment reads, model execution, patch application, or status publishing into domain code.
+
 ## Dependency Rules
 
 ```text
