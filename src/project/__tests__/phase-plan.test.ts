@@ -93,15 +93,22 @@ describe("logger", () => {
 });
 
 describe("setup bootstrap", () => {
-  it("provides a POSIX shell bootstrap that installs Node locally before running setup", () => {
+  it("provides Volta pins and a POSIX bootstrap that installs pinned Node before running setup", () => {
     const script = readFileSync("scripts/setup.sh", "utf8");
     const gitignore = readFileSync(".gitignore", "utf8");
     const gitAttributes = readFileSync(".gitattributes", "utf8");
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      engines?: Record<string, string>;
       scripts?: Record<string, string>;
+      volta?: Record<string, string>;
     };
 
+    assert.equal(packageJson.engines?.node, ">=24.0.0");
+    assert.equal(packageJson.volta?.node, "24.14.0");
+    assert.equal(packageJson.volta?.npm, "10.9.0");
     assert.match(script, /^#!\/bin\/sh/u);
+    assert.match(script, /NPM_VERSION="\$\{NPM_VERSION:-10\.9\.0\}"/u);
+    assert.match(script, /volta install "node@\$NODE_VERSION" "npm@\$NPM_VERSION"/u);
     assert.match(script, /nodejs\.org\/dist\/v\$NODE_VERSION/u);
     assert.match(script, /\.tools\/node/u);
     assert.match(script, /scripts\/setup\.mjs/u);
