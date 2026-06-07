@@ -1,0 +1,15 @@
+{
+  "name": "code-reviewer-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontier Pair based AI PR review, fix, and convergence pipeline scaffold.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "npm run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

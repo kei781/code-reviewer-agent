@@ -6,6 +6,7 @@
 - **범위**: GitHub Pull Request 생성 이후의 자동 리뷰, 선택적 자동수정, 재검증, 수렴 판정, 조건부 merge gate
 - **관련 PRD**: `PRD.md`
 - **갱신 (v4)**: 벤더 중심 표현을 역할 중심으로 재정의. 핵심 목표를 `Claude/Codex 연동`이 아니라 **서로 다른 동급 프론티어 모델 두 개가 Reviewer(R) / Fixer(F)를 나눠 맡고, R이 더 이상 blocker를 찾지 못하는 fixpoint 상태로 PR을 수렴시키는 것**으로 명시.
+- **갱신 (v5)**: P0 실행 형태를 GitHub Actions 직접 실행이 아니라 **외부 리뷰서버 webhook → 로컬 clone/checkout/pull → Claude Code 오케스트레이터 → Claude Code/Codex 독립 리뷰 → 코드베이스 기반 교차검증 → PR inline comment 게시** 흐름으로 정정한다.
 
 ---
 
@@ -139,6 +140,30 @@ fork PR:
 ```
 
 ---
+
+## 2.1 P0 Runtime Correction — Review Server First
+
+최신 P0 실행 형태는 repository-hosted GitHub Actions가 직접 AI 리뷰를 수행하는 방식이 아니다. GitHub은 PR 생성/변경 이벤트를 리뷰서버 webhook으로 전달하고, 리뷰서버가 로컬 workspace에서 다음 순서로 코드베이스를 준비한다.
+
+```text
+git clone <repo> <workspace>
+git -C <workspace> checkout <branch>
+git -C <workspace> pull origin <branch>
+```
+
+이 로컬 checkout은 단순 편의가 아니라 교차검증의 근거다. Claude Code와 Codex가 독립적으로 후보 리뷰를 만든 뒤, 오케스트레이터는 반드시 checkout된 실제 파일과 diff를 다시 열어 후보 지적을 검증해야 한다. 코드베이스 evidence가 없는 후보는 PR comment로 게시하지 않는다.
+
+P0 agent topology는 다음과 같다.
+
+```text
+review server
+└── local PR branch workspace
+    └── orchestrator: Claude Code (MVP judge)
+        ├── reviewer agent 1: Claude Code
+        └── reviewer agent 2: Codex
+```
+
+오케스트레이터와 reviewer agent 1/2의 harness는 각 agent module과 같은 레벨에 둔다. 이 규칙은 harness prompt와 agent 책임을 함께 감사할 수 있게 하기 위한 구조적 제약이다.
 
 ## 3. Decision Summary
 
@@ -756,16 +781,17 @@ FIXER_ACTION_OR_ADAPTER: repository variable
 
 ### P0 완료 기준
 
-- reviewer review workflow가 `main`에 존재한다.
-- same-repo PR opened/synchronize/reopened/ready_for_review에서 reviewer workflow가 실행된다.
-- draft, closed, fork PR은 정책에 따라 skip된다.
-- reviewer output은 structured PR comment이며 `MERGE_SIGNAL`, reviewed SHA, reviewer model metadata를 포함한다.
-- blocker와 suggestion이 분리된다.
-- `sql-agent` safety checklist가 포함된다.
-- 명시적 reviewer mention/command에 read-only 후속 응답을 한다.
+- GitHub PR webhook이 외부 리뷰서버로 전달된다.
+- 리뷰서버가 대상 repository와 PR branch를 로컬 workspace에 `git clone`, `git checkout`, `git pull origin <branch>` 순서로 준비한다.
+- Codex, Claude Code, Claude Code↔Codex plugin/tooling 사전설정이 문서화된다.
+- agent topology가 명확하다: 오케스트레이터는 Claude Code, reviewer agent 1은 Claude Code, reviewer agent 2는 Codex다.
+- 각 agent module과 같은 레벨에 harness가 존재한다.
+- Claude Code와 Codex는 독립적으로 후보 리뷰를 만든다.
+- 오케스트레이터는 후보 finding을 로컬 코드베이스와 PR diff로 교차검증한다.
+- 코드베이스 evidence가 없는 finding은 PR comment로 게시하지 않는다.
+- reviewer output은 structured PR comment이며 reviewed SHA, agent identity, cross-validation 결과를 포함한다.
 - reviewer는 formal approve/review 제출을 필수 전제로 삼지 않는다.
-- 실패와 skip reason이 workflow log 또는 PR comment에 남는다.
-- 최종 approve/merge는 사람이 수행한다.
+- 최종 resolve, 추가개발 지시, approve/merge는 사람이 수행한다.
 
 ### P1 완료 기준
 
