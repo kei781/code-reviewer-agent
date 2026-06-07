@@ -102,6 +102,7 @@ describe("logger", () => {
 describe("setup bootstrap", () => {
   it("provides Volta pins and a POSIX bootstrap that installs pinned Node before running setup", () => {
     const script = readFileSync("scripts/setup.sh", "utf8");
+    const nodeSetupScript = readFileSync("scripts/setup.mjs", "utf8");
     const gitignore = readFileSync(".gitignore", "utf8");
     const gitAttributes = readFileSync(".gitattributes", "utf8");
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
@@ -119,9 +120,16 @@ describe("setup bootstrap", () => {
     assert.match(script, /nodejs\.org\/dist\/v\$NODE_VERSION/u);
     assert.match(script, /\.tools\/node/u);
     assert.match(script, /scripts\/setup\.mjs/u);
+    assert.match(nodeSetupScript, /readFileSync\("\.env\.example"/u);
+    assert.match(nodeSetupScript, /ensureFile\("\.env"/u);
+    assert.match(nodeSetupScript, /cleanDirectory\("dist"\)/u);
     assert.doesNotMatch(script, /\bsudo\b/u);
     assert.match(gitignore, /^\.tools\/$/mu);
+    assert.match(gitignore, /^\.env$/mu);
+    assert.match(gitignore, /^!.env\.example$/mu);
     assert.match(gitAttributes, /^scripts\/\*\.sh text eol=lf$/mu);
+    assert.equal(packageJson.scripts?.clean, "node scripts/clean-dist.mjs");
+    assert.match(packageJson.scripts?.build ?? "", /^npm run clean && /u);
     assert.equal(packageJson.scripts?.["setup:sh"], "sh scripts/setup.sh");
   });
 });

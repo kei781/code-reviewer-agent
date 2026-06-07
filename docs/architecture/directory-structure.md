@@ -52,7 +52,7 @@ Phase 6 adds P2-A/P3 guardrail contracts without adding autonomous side effects.
 
 ```text
 src/project       -> static repository metadata
-src/shared        -> project-agnostic utilities; importable by any layer
+src/shared        -> project-agnostic utilities and central runtime config parsing; importable by any layer
 src/domain        -> pure policies, contracts, and state; may import shared/project
 src/app           -> use cases and ports; may import domain/shared/project
 src/agents        -> role specs and harness builders; may import domain/project context types
@@ -65,6 +65,7 @@ Forbidden directions:
 - `src/domain` must not import `src/app` or `src/adapters`.
 - `src/app` must not hard-code a model provider, GitHub SDK, shell command implementation, or persistence implementation.
 - `src/shared` must not contain project-specific PR review policy.
+- `src/shared/config.ts` is the only TypeScript source module that may read `process.env`; adapter/runtime code should consume the exported typed config instead of reading env directly.
 - `src/agents` harnesses must not hold secrets, GitHub tokens, or hidden shared reviewer context.
 - `src/orchestration` run-plan code must not execute shell commands directly.
 - Adapter code must not redefine domain policy.

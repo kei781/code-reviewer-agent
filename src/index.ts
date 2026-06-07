@@ -9,6 +9,19 @@ export {
 
 export type { PhaseDefinition, PhaseId, PhaseStatus } from "./shared/phase.js";
 export { log, resetLogSink, setLogSink, type LogEntry, type LogLevel, type LogOptions, type LogSink } from "./shared/log.js";
+export {
+  loadConfig,
+  loadConfigFromEnv,
+  requiredConfigKeys
+} from "./shared/config.js";
+export type {
+  Config,
+  ConfigEnvSource,
+  ConfigKey,
+  ConfigLoadResult,
+  InvalidConfigValue,
+  ModelConfig
+} from "./shared/config.js";
 export { implementationPhases as reviewServerImplementationPhases } from "./domain/workflow/phases.js";
 
 export type { MergeSignal, ReviewSignal } from "./domain/review/reviewSignal.js";
