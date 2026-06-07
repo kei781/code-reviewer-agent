@@ -9,6 +9,7 @@ export interface ReviewMarkerMetadata {
   readonly round: number;
   readonly convergence: ReviewConvergenceState;
   readonly mergeSignal: MergeSignal;
+  readonly passOrigin: 'FIRST_PASS' | 'LOOP_FIXPOINT' | 'NONE';
 }
 
 export const reviewSummaryMarker = '<!-- ai-review:summary -->';
@@ -22,6 +23,7 @@ export function renderReviewMarkers(metadata: ReviewMarkerMetadata): readonly st
     `<!-- ai-review:reviewed-sha=${metadata.reviewedSha} -->`,
     `<!-- ai-review:epoch=${metadata.epoch} round=${metadata.round} -->`,
     `<!-- ai-review:convergence=${metadata.convergence} -->`,
+    `<!-- ai-review:pass-origin=${metadata.passOrigin} -->`,
     `<!-- ai-review:MERGE_SIGNAL=${metadata.mergeSignal} -->`,
     `<!-- ai-orchestrator:state=${metadata.convergence} -->`,
     `<!-- ai-orchestrator:epoch=${metadata.epoch} -->`,

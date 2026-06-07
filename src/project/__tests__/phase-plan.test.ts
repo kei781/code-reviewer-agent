@@ -126,4 +126,10 @@ describe("directory rules", () => {
     assert.ok(adapterRule);
     assert.ok(adapterRule.mustNotContain.includes("R/F role conflation"));
   });
+
+  it("keeps app use cases independent from orchestration module types", () => {
+    const appSource = readFileSync("src/app/runEnsembleReview.ts", "utf8");
+
+    assert.doesNotMatch(appSource, /\.\.\/orchestration\//u);
+  });
 });

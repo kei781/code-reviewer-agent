@@ -22,6 +22,7 @@ export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/r
 export type { ReviewerTriggerDecision } from "./domain/policy/reviewerTriggerPolicy.js";
 export { validateFindingForPublication } from "./domain/review/crossValidation.js";
 export type { CandidateReviewFinding, CodebaseEvidence, CrossValidatedFinding } from "./domain/review/crossValidation.js";
+export type { PullRequestReviewContext } from "./domain/review/pullRequestReviewContext.js";
 
 export { mvpOrchestratorAgent } from "./agents/orchestrator.js";
 export type { AgentModuleSpec } from "./agents/orchestrator.js";
@@ -38,20 +39,27 @@ export {
 } from "./orchestration/reviewServerPipeline.js";
 export type {
   GitCommandPlan,
-  PullRequestReviewContext,
   ReviewServerRunPlan,
   ReviewServerSetupRequirement
 } from "./orchestration/reviewServerPipeline.js";
 
 export { runEnsembleReview } from "./app/runEnsembleReview.js";
 export type {
+  HumanReviewReason,
   OrchestratedReviewResult,
   PullRequestWebhookAction,
   PullRequestWebhookEvent,
+  ReviewClaimResult,
+  ReviewFailurePublication,
+  ReviewFailureRecord,
+  ReviewFailureStage,
   ReviewOrchestratorPort,
+  ReviewPassOrigin,
   ReviewPublication,
   ReviewPublicationSummary,
+  ReviewPublishedRecord,
   ReviewPublisherPort,
+  ReviewRecommendedLabel,
   ReviewRunResult,
   ReviewServerPorts,
   ReviewSkipPublication,

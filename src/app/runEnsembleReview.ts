@@ -1,12 +1,13 @@
 import { decideP0ReviewerEligibility } from '../domain/policy/pullRequestPolicy.js';
+import { evaluateRiskyPaths, type RiskyPathMatch } from '../domain/policy/riskyPathPolicy.js';
 import {
   type CandidateReviewFinding,
   type CrossValidatedFinding,
   validateFindingForPublication
 } from '../domain/review/crossValidation.js';
+import type { PullRequestReviewContext } from '../domain/review/pullRequestReviewContext.js';
 import { renderReviewMarkers, type ReviewConvergenceState } from '../domain/review/reviewMarker.js';
 import type { MergeSignal } from '../domain/review/reviewSignal.js';
-import type { PullRequestReviewContext } from '../orchestration/reviewServerPipeline.js';
 
 export type PullRequestWebhookAction = 'opened' | 'synchronize' | 'reopened' | 'ready_for_review';
 
@@ -44,9 +45,33 @@ export interface ReviewStateRecord extends ReviewStateKey {
   readonly deliveryId: string;
 }
 
+export type ReviewClaimResult =
+  | { readonly status: 'claimed' }
+  | { readonly status: 'already-processed-delivery' }
+  | { readonly status: 'already-reviewed-sha' };
+
+export interface ReviewPublishedRecord extends ReviewStateRecord {
+  readonly postedFindingFingerprints: readonly string[];
+}
+
+export type ReviewFailureStage =
+  | 'claim-review'
+  | 'prepare-workspace'
+  | 'run-independent-reviews'
+  | 'list-posted-finding-fingerprints'
+  | 'publish-review'
+  | 'mark-review-published';
+
+export interface ReviewFailureRecord extends ReviewStateRecord {
+  readonly stage: ReviewFailureStage;
+  readonly message: string;
+}
+
 export interface ReviewStateStorePort {
-  hasReviewedSha(input: ReviewStateKey): Promise<boolean>;
-  markReviewedSha(input: ReviewStateRecord): Promise<void>;
+  claimReview(input: ReviewStateRecord): Promise<ReviewClaimResult>;
+  listPostedFindingFingerprints(input: ReviewStateKey): Promise<readonly string[]>;
+  markReviewPublished(input: ReviewPublishedRecord): Promise<void>;
+  markReviewFailed(input: ReviewFailureRecord): Promise<void>;
 }
 
 export interface ReviewWorkspacePort {
@@ -69,11 +94,22 @@ export type ReviewSkipReason =
   | 'draft'
   | 'closed'
   | 'fork'
-  | 'already-reviewed-sha';
+  | 'already-reviewed-sha'
+  | 'already-processed-delivery';
+
+export type HumanReviewReason = 'required-risky-path' | 'dropped-blocker-candidate';
+export type ReviewRecommendedLabel = 'security-sensitive';
+export type ReviewPassOrigin = 'FIRST_PASS' | 'LOOP_FIXPOINT' | 'NONE';
 
 export interface ReviewSkipPublication {
   readonly deliveryId: string;
   readonly reason: ReviewSkipReason;
+  readonly repositoryFullName: string;
+  readonly pullRequestNumber: number;
+  readonly headSha: string;
+}
+
+export interface ReviewFailurePublication extends ReviewFailureRecord {
   readonly repositoryFullName: string;
   readonly pullRequestNumber: number;
   readonly headSha: string;
@@ -84,7 +120,12 @@ export interface ReviewPublicationSummary {
   readonly reviewerAgentIds: readonly string[];
   readonly keptFindingCount: number;
   readonly droppedFindingCount: number;
+  readonly dedupedFindingCount: number;
   readonly mergeSignal: MergeSignal;
+  readonly passOrigin: ReviewPassOrigin;
+  readonly humanReviewReasons: readonly HumanReviewReason[];
+  readonly recommendedLabels: readonly ReviewRecommendedLabel[];
+  readonly riskyPathMatches: readonly RiskyPathMatch[];
   readonly markerLines: readonly string[];
 }
 
@@ -96,6 +137,7 @@ export interface ReviewPublication {
 
 export interface ReviewPublisherPort {
   publishReview(result: ReviewPublication): Promise<void>;
+  publishFailure(failure: ReviewFailurePublication): Promise<void>;
   publishSkip(skip: ReviewSkipPublication): Promise<void>;
 }
 
@@ -112,8 +154,15 @@ export type ReviewRunResult =
       readonly status: 'published';
       readonly keptFindingCount: number;
       readonly droppedFindingCount: number;
+      readonly dedupedFindingCount: number;
       readonly mergeSignal: MergeSignal;
-    };
+    }
+  | { readonly status: 'failed'; readonly stage: ReviewFailureStage };
+
+interface FindingValidationResult {
+  readonly keptFindings: readonly CrossValidatedFinding[];
+  readonly droppedFindings: readonly CandidateReviewFinding[];
+}
 
 const supportedWebhookActions = ['opened', 'synchronize', 'reopened', 'ready_for_review'] as const;
 
@@ -141,32 +190,79 @@ export async function runEnsembleReview(
   }
 
   const stateKey = toStateKey(event);
-  if (await ports.stateStore.hasReviewedSha(stateKey)) {
-    return publishSkip(event, ports, 'already-reviewed-sha');
+  const stateRecord = { ...stateKey, deliveryId: event.deliveryId };
+  let stage: ReviewFailureStage = 'claim-review';
+  let claimSucceeded = false;
+
+  try {
+    const claim = await ports.stateStore.claimReview(stateRecord);
+    if (claim.status !== 'claimed') {
+      return publishSkip(event, ports, claim.status);
+    }
+    claimSucceeded = true;
+
+    const riskyPathDecision = evaluateRiskyPaths(event.changedPaths);
+
+    stage = 'prepare-workspace';
+    const context = await ports.workspace.prepareWorkspace(toWorkspaceRequest(event));
+
+    stage = 'run-independent-reviews';
+    const orchestratedReview = await ports.orchestrator.runIndependentReviews(context);
+    const validation = validateFindings(orchestratedReview);
+
+    stage = 'list-posted-finding-fingerprints';
+    const alreadyPostedFingerprints = await ports.stateStore.listPostedFindingFingerprints(stateKey);
+    const findings = filterPreviouslyPostedFindings(validation.keptFindings, alreadyPostedFingerprints);
+    const dedupedFindingCount = validation.keptFindings.length - findings.length;
+    const droppedFindingCount = validation.droppedFindings.length;
+    const reviewDecision = decideMergeSignal({
+      keptFindings: validation.keptFindings,
+      droppedFindings: validation.droppedFindings,
+      riskyPathMatches: riskyPathDecision.matches
+    });
+    const summary = buildReviewPublicationSummary({
+      reviewedSha: event.headSha,
+      reviewerAgentIds: orchestratedReview.reviewerAgentIds,
+      keptFindingCount: validation.keptFindings.length,
+      droppedFindingCount,
+      dedupedFindingCount,
+      mergeSignal: reviewDecision.mergeSignal,
+      passOrigin: reviewDecision.passOrigin,
+      humanReviewReasons: reviewDecision.humanReviewReasons,
+      recommendedLabels: reviewDecision.recommendedLabels,
+      riskyPathMatches: riskyPathDecision.matches
+    });
+
+    stage = 'publish-review';
+    await ports.publisher.publishReview({ context, findings, summary });
+
+    stage = 'mark-review-published';
+    await ports.stateStore.markReviewPublished({
+      ...stateRecord,
+      postedFindingFingerprints: findings.map((finding) => finding.fingerprint)
+    });
+
+    return {
+      status: 'published',
+      keptFindingCount: validation.keptFindings.length,
+      droppedFindingCount,
+      dedupedFindingCount,
+      mergeSignal: reviewDecision.mergeSignal
+    };
+  } catch (error) {
+    const failure = {
+      ...stateRecord,
+      stage,
+      message: errorMessage(error)
+    };
+
+    await ports.publisher.publishFailure(failure);
+    if (claimSucceeded) {
+      await ports.stateStore.markReviewFailed(failure);
+    }
+
+    return { status: 'failed', stage };
   }
-
-  const context = await ports.workspace.prepareWorkspace(toWorkspaceRequest(event));
-  const orchestratedReview = await ports.orchestrator.runIndependentReviews(context);
-  const findings = crossValidateFindings(orchestratedReview);
-  const droppedFindingCount = orchestratedReview.candidateFindings.length - findings.length;
-  const mergeSignal = findings.some((finding) => finding.severity === 'blocker') ? 'BLOCKED' : 'PASS';
-  const summary = buildReviewPublicationSummary({
-    reviewedSha: event.headSha,
-    reviewerAgentIds: orchestratedReview.reviewerAgentIds,
-    keptFindingCount: findings.length,
-    droppedFindingCount,
-    mergeSignal
-  });
-
-  await ports.publisher.publishReview({ context, findings, summary });
-  await ports.stateStore.markReviewedSha({ ...stateKey, deliveryId: event.deliveryId });
-
-  return {
-    status: 'published',
-    keptFindingCount: findings.length,
-    droppedFindingCount,
-    mergeSignal
-  };
 }
 
 function isSupportedWebhookAction(action: string): action is PullRequestWebhookAction {
@@ -225,15 +321,81 @@ async function publishSkip(
   return { status: 'skipped', reason };
 }
 
-function crossValidateFindings(review: OrchestratedReviewResult): readonly CrossValidatedFinding[] {
-  return review.candidateFindings.flatMap((finding) => {
+function validateFindings(review: OrchestratedReviewResult): FindingValidationResult {
+  const keptFindings: CrossValidatedFinding[] = [];
+  const droppedFindings: CandidateReviewFinding[] = [];
+
+  for (const finding of review.candidateFindings) {
     const validatedFinding = validateFindingForPublication(
       finding,
       review.corroboratingAgentIdsByFindingId[finding.id] ?? []
     );
 
-    return validatedFinding === undefined ? [] : [validatedFinding];
-  });
+    if (validatedFinding === undefined) {
+      droppedFindings.push(finding);
+    } else {
+      keptFindings.push(validatedFinding);
+    }
+  }
+
+  return { keptFindings, droppedFindings };
+}
+
+function filterPreviouslyPostedFindings(
+  findings: readonly CrossValidatedFinding[],
+  alreadyPostedFingerprints: readonly string[]
+): readonly CrossValidatedFinding[] {
+  const alreadyPosted = new Set(alreadyPostedFingerprints);
+
+  return findings.filter((finding) => !alreadyPosted.has(finding.fingerprint));
+}
+
+function decideMergeSignal(input: {
+  readonly keptFindings: readonly CrossValidatedFinding[];
+  readonly droppedFindings: readonly CandidateReviewFinding[];
+  readonly riskyPathMatches: readonly RiskyPathMatch[];
+}): {
+  readonly mergeSignal: MergeSignal;
+  readonly passOrigin: ReviewPassOrigin;
+  readonly humanReviewReasons: readonly HumanReviewReason[];
+  readonly recommendedLabels: readonly ReviewRecommendedLabel[];
+} {
+  const humanReviewReasons: HumanReviewReason[] = [];
+  const recommendedLabels: ReviewRecommendedLabel[] = [];
+
+  if (input.riskyPathMatches.some((match) => match.severity === 'required')) {
+    humanReviewReasons.push('required-risky-path');
+    recommendedLabels.push('security-sensitive');
+  }
+
+  if (input.droppedFindings.some((finding) => finding.severity === 'blocker')) {
+    humanReviewReasons.push('dropped-blocker-candidate');
+  }
+
+  if (humanReviewReasons.length > 0) {
+    return {
+      mergeSignal: 'HUMAN_REVIEW_REQUIRED',
+      passOrigin: 'NONE',
+      humanReviewReasons,
+      recommendedLabels
+    };
+  }
+
+  if (input.keptFindings.some((finding) => finding.severity === 'blocker')) {
+    return {
+      mergeSignal: 'BLOCKED',
+      passOrigin: 'NONE',
+      humanReviewReasons,
+      recommendedLabels
+    };
+  }
+
+  return {
+    mergeSignal: 'PASS',
+    passOrigin: 'FIRST_PASS',
+    humanReviewReasons,
+    recommendedLabels
+  };
 }
 
 function buildReviewPublicationSummary(input: {
@@ -241,7 +403,12 @@ function buildReviewPublicationSummary(input: {
   readonly reviewerAgentIds: readonly string[];
   readonly keptFindingCount: number;
   readonly droppedFindingCount: number;
+  readonly dedupedFindingCount: number;
   readonly mergeSignal: MergeSignal;
+  readonly passOrigin: ReviewPassOrigin;
+  readonly humanReviewReasons: readonly HumanReviewReason[];
+  readonly recommendedLabels: readonly ReviewRecommendedLabel[];
+  readonly riskyPathMatches: readonly RiskyPathMatch[];
 }): ReviewPublicationSummary {
   return {
     ...input,
@@ -251,11 +418,16 @@ function buildReviewPublicationSummary(input: {
       epoch: 1,
       round: 1,
       convergence: toConvergenceState(input.mergeSignal),
-      mergeSignal: input.mergeSignal
+      mergeSignal: input.mergeSignal,
+      passOrigin: input.passOrigin
     })
   };
 }
 
 function toConvergenceState(mergeSignal: MergeSignal): ReviewConvergenceState {
   return mergeSignal === 'PASS' ? 'CONVERGED_CLEAN' : 'HUMAN_REVIEW_REQUIRED';
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
