@@ -1,11 +1,26 @@
 # PRD — Frontier Pair 기반 AI PR 리뷰·수정·수렴 파이프라인
 
-- **버전**: v4 통합본
-- **상태**: Ready for P0 implementation, Draft for P1+
-- **작성일**: 2026-06-03
+- **버전**: v5 (자체 호스팅 앵상블 리뷰 개정)
+- **상태**: Amended (v5, 2026-06-04) — 아래 **§0** 참조 (충돌 시 §0 우선)
+- **작성일**: 2026-06-03 (v5 개정 2026-06-04)
 - **대상 저장소**: `kei781/sql-agent`
 - **관련 ADR**: `ADR.md`
 - **갱신 (v4)**: 제품 목표를 “Claude/Codex 연동”에서 “서로 다른 동급 프론티어 모델 R/F가 reviewer/fixer를 나눠 맡고, blocker 0 fixpoint까지 PR을 수렴시켜 사람이 spot-check만 하게 만드는 것”으로 재정의. 문서 전반의 역할명, workflow명, prompt, 상태 머신을 vendor-neutral 구조로 정리.
+
+---
+
+## 0. v5 개정 (2026-06-04) — 자체 호스팅 앵상블 리뷰
+
+이 PRD는 원래 "**GitHub Actions 기반 R리뷰 / F자동수정 / 수렴**" 제품을 정의했다(아래 §1~ 원문 보존). v5에서 제품 모델을 **앵상블 리뷰**로 개정한다. 상세 설계: `docs/superpowers/specs/2026-06-04-frontier-pair-self-hosted-orchestrator-design.md`.
+
+- **오케스트레이터**: GitHub Actions → **자체 호스팅 webhook 서버 + 격리 에이전트 세션**. (§5 이해관계자표의 "오케스트레이터/Apply 권한자 = GitHub Actions" 대체)
+- **파이프라인**: R리뷰 → F자동수정 → 수렴 → **두 모델 독립 리뷰 → 코드베이스 기반 교차검증 → 유효 finding 게시**. 자동수정·auto-merge는 **future scope**(FR-007~FR-014 이연). 수정은 사람이 결정.
+- **역할**: Codex = **두 번째 리뷰어**(Fixer 아님).
+- **코드 접근**: diff → **풀 체크아웃**(서버측 fetch, 읽기전용 샌드박스 주입). **상태**: marker → **SQLite + PR 코멘트 하이브리드**.
+- **파일 구조**: `.github/workflows/*` → **자체 서버**(src/ 헥사고날: domain/app/adapters). (§12 파일 구조 대체)
+- **보안**: 샌드박스 격리, **샌드박스에 GitHub 토큰·App key 미주입**, egress=모델 API만, PR 통제 코드 실행 기본 금지.
+
+> 아래 §1~ 원문은 맥락 보존. 충돌 시 본 §0가 우선한다. 자동수정·수렴 관련 FR(FR-007~FR-014)·상태머신은 future scope로 본다.
 
 ---
 
