@@ -44,6 +44,8 @@ Phase 3 adds only pure P1 policy contracts. `src/domain/fixer` owns reviewer act
 
 Phase 4 keeps the P1 loop contract in the domain layer. `src/domain/convergence` owns terminal-state decisions for delta verification, round caps, and oscillation detection, while `src/domain/review/orchestratorStateMarker.ts` parses hidden `ai-orchestrator` PR comment markers into typed audit state. The marker parser requires trusted orchestrator comment provenance and marks parsed data as `audit-only`; future adapters must keep authoritative loop state in their injected persistence such as SQLite. These contracts let adapters persist and recover loop context without moving GitHub comment reads, model execution, patch application, or status publishing into domain code.
 
+Phase 5 adds P2-H merge-gate contracts without adding merge side effects. `src/domain/merge` owns `ai-review/verdict` check conclusion mapping and conservative GitHub native auto-merge eligibility. These policies return data such as `success`, `failure`, `neutral`, `enable-github-auto-merge`, or explicit block reasons; adapters remain responsible for publishing check runs/statuses, managing labels, configuring branch protection, and invoking GitHub native auto-merge only when the domain decision allows it.
+
 ## Dependency Rules
 
 ```text

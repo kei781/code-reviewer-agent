@@ -54,6 +54,25 @@ export type {
   ConvergenceStateInput,
   ConvergenceTerminalState
 } from "./domain/convergence/convergenceState.js";
+export { decideVerdictCheck } from "./domain/merge/verdictCheck.js";
+export type {
+  VerdictCheckConclusion,
+  VerdictCheckInput,
+  VerdictCheckName,
+  VerdictCheckPublication,
+  VerdictCheckReason
+} from "./domain/merge/verdictCheck.js";
+export { decideConservativeMergeGate } from "./domain/merge/mergeGatePolicy.js";
+export type {
+  ConservativeMergeGateBlockReason,
+  ConservativeMergeGateDecision,
+  ConservativeMergeGateInput,
+  ConservativeMergeGateNextAction,
+  ConservativeMergeGateRecommendedLabel,
+  ConservativeMergeMethod,
+  RequiredCheckConclusion,
+  RequiredCheckStatus
+} from "./domain/merge/mergeGatePolicy.js";
 export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/reviewerTriggerPolicy.js";
 export type { ReviewerTriggerDecision } from "./domain/policy/reviewerTriggerPolicy.js";
 export { validateFindingForPublication } from "./domain/review/crossValidation.js";
