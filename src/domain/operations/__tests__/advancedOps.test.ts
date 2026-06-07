@@ -116,9 +116,27 @@ describe("P2-A autonomous readiness", () => {
     assert.ok(unmatchedDecision.recommendedLabels.includes("needs-human-review"));
     assert.deepEqual(unmatchedDecision.unmatchedLowRiskPaths, ["src/domain/policy/autofixPolicy.ts"]);
   });
+
+  it("blocks empty changed paths because low-risk status cannot be proven", () => {
+    const decision = decideAutonomousReadiness(validAutonomousInput({ changedPaths: [] }));
+
+    assert.equal(decision.allowed, false);
+    assert.equal(decision.nextAction, "skip");
+    assert.ok(decision.reasons.includes("not-low-risk-path"));
+    assert.ok(decision.recommendedLabels.includes("needs-human-review"));
+  });
 });
 
 describe("P3 operational follow-up planning", () => {
+  it("does not alert when the run is healthy and no follow-up is needed", () => {
+    const plan = planOperationalFollowUp(validOperationalInput());
+
+    assert.equal(plan.shouldAlert, false);
+    assert.deepEqual(plan.alertReasons, []);
+    assert.deepEqual(plan.recommendedChannels, []);
+    assert.deepEqual(plan.runbookIds, []);
+  });
+
   it("returns pure alert and runbook data for stalled or capped automation", () => {
     const stalled = planOperationalFollowUp(validOperationalInput({ terminalState: "STALLED_OSCILLATING" }));
     const capped = planOperationalFollowUp(validOperationalInput({ terminalState: "CAPPED_WITH_OPEN" }));
@@ -155,6 +173,18 @@ describe("P3 operational follow-up planning", () => {
     );
     assert.ok(plan.recommendedChannels.includes("github-comment"));
     assert.ok(plan.recommendedChannels.includes("slack"));
+  });
+
+  it("routes CI merge blocks to the branch protection and checks runbook", () => {
+    const plan = planOperationalFollowUp(
+      validOperationalInput({
+        mergeGateAllowed: false,
+        mergeGateReasons: ["ci-not-success"]
+      })
+    );
+
+    assert.ok(plan.alertReasons.includes("merge-gate-blocked"));
+    assert.ok(plan.runbookIds.includes("check-branch-protection"));
   });
 });
 

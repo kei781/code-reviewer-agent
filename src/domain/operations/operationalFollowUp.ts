@@ -108,7 +108,11 @@ export function planOperationalFollowUp(input: OperationalFollowUpInput): Operat
 }
 
 function addMergeGateRunbook(mergeGateReasons: readonly string[], runbookIds: Set<OperationalRunbookId>): void {
-  if (mergeGateReasons.some((reason) => reason.includes("branch-protection") || reason.includes("required-check"))) {
+  if (
+    mergeGateReasons.some(
+      (reason) => reason === "ci-not-success" || reason.includes("branch-protection") || reason.includes("required-check")
+    )
+  ) {
     runbookIds.add("check-branch-protection");
     return;
   }

@@ -131,6 +131,11 @@ export function decideAutonomousReadiness(input: AutonomousReadinessInput): Auto
     recommendedLabels.add(riskyPathDecision.hasRequiredRisk ? "security-sensitive" : "needs-human-review");
   }
 
+  if (input.changedPaths.length === 0) {
+    reasons.push("not-low-risk-path");
+    recommendedLabels.add("needs-human-review");
+  }
+
   if (unmatchedLowRiskPaths.length > 0) {
     reasons.push("not-low-risk-path");
     recommendedLabels.add("needs-human-review");
