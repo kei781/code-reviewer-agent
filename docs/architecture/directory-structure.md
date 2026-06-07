@@ -1,67 +1,75 @@
 # Directory Structure and Dependency Direction
 
-The repository is intentionally split by responsibility so each module can be reused by future GitHub Actions, CLIs, local simulations, or alternative model adapters.
+This repository is split by responsibility so each module can be reused by a future webhook server, CLI, GitHub adapter, model adapter, or local simulation without changing domain rules.
 
 ```text
 .
-├── ADR.md                         # Latest architecture decision record
-├── PRD.md                         # Latest product requirements document
-├── AGENTS.md                      # Binding instructions for future agents
-├── docs/
-│   ├── phase-plan.md              # Ordered PR-by-PR implementation plan
-│   └── architecture/
-│       └── directory-structure.md # This boundary document
-├── src/
-│   ├── domain/                    # Pure policies, types, state machines
-│   ├── app/                       # Use cases and orchestration ports
-│   ├── adapters/                  # GitHub/model/runtime implementations
-│   ├── agents/                    # P0 agent specs and same-level harness contracts
-│   ├── orchestration/             # P0 review-server run-plan scaffold
-│   ├── shared/                    # Generic utilities
-│   └── project/                   # Repo-local phase and directory metadata
-├── package.json
-└── tsconfig.json
+|-- ADR.md
+|-- PRD.md
+|-- AGENTS.md
+|-- docs/
+|   |-- implementation notes and phase plans
+|   `-- architecture/
+|       `-- directory-structure.md
+|-- src/
+|   |-- domain/
+|   |-- app/
+|   |-- adapters/
+|   |-- agents/
+|   |-- orchestration/
+|   |-- shared/
+|   `-- project/
+|-- package.json
+`-- tsconfig.json
 ```
 
-## v5 구성요소 (자체 호스팅 앵상블 리뷰 — 2026-06-04)
+## P0 v5 Shape
 
-오케스트레이터가 GitHub Actions → **자체 호스팅 webhook 서버**로 바뀌었다(ADR/PRD §0). 어댑터 계층에 다음이 추가된다 (전부 adapter 계층 — domain/app 포트를 구현/호출):
+The latest ADR/PRD v5 correction makes the P0 runtime an external review server, not a repository-hosted GitHub Actions AI review job.
 
-- `src/adapters/HttpWebhookServer` — GitHub App webhook 수신 + HMAC 검증
-- `src/adapters/GitHubAppAdapter` — Octokit + 설치토큰 발급 + 코멘트/인라인 게시 (서버측)
-- `src/adapters/GitCliAdapter` — clone/checkout/pull (서버측, 읽기전용 작업공간 생성)
-- `src/adapters/ContainerSandboxAdapter` — 격리 컨테이너 실행 (egress allowlist 강제, GitHub 토큰 미주입, PR 에이전트 설정 중화)
-- `src/adapters/ClaudeCodeOrchestratorAdapter` — `OrchestratorPort` MVP 구현: 격리 세션에서 Reviewer 패스 spawn + 코드기반 교차검증 (교체 대상 — 추후 `ServerReconcileOrchestrator`)
-- `src/adapters/ClaudeReviewerPassAdapter` / `CodexReviewerPassAdapter` — 각각 fresh-context 단일 모델 리뷰 → findings JSON
-- `src/adapters/SqliteStateAdapter`, `SqliteQueueAdapter` — 제어 상태 · 경량 큐
+The P0 scaffold therefore models this flow as data:
 
-이번 P0 scaffold는 agent 책임과 harness prompt를 함께 감사하기 위해 `src/agents/*`에 module/harness sibling pair를 둔다. `src/orchestration/reviewServerPipeline.ts`는 webhook 서버 구현이 아니라 clone/checkout/pull 및 harness 조립을 표현하는 run-plan scaffold다. 실제 서버, GitHub, git, sandbox, model 호출은 추후 `src/app` port와 `src/adapters` 구현으로 이동/연결한다.
+1. GitHub sends PR events to a self-hosted webhook server.
+2. The server prepares a local workspace with `git clone`, `git fetch --no-tags origin <branch>`, and `git checkout --detach <head-sha>`.
+3. Claude Code acts as the MVP orchestrator.
+4. Claude Code and Codex reviewer passes run independently with fresh context.
+5. The orchestrator cross-validates candidate findings against the local checkout and PR diff.
+6. Only codebase-backed findings are posted as review comments.
 
-app 계층에는 `RunEnsembleReview` 유스케이스와 `GitHubPort/GitWorkspacePort/OrchestratorPort/ReviewerPassPort/SandboxRunnerPort/StateStorePort/QueuePort`가 추가된다. 도메인 경계 규칙(아래)은 그대로다.
+Concrete webhook, GitHub, git, sandbox, state, and model calls belong behind ports/adapters. Phase 1 starts this by adding an app-level `RunEnsembleReview` use case that accepts typed webhook event data, atomically claims review work through an injected state port, deduplicates posted finding fingerprints, and coordinates injected ports without calling concrete integrations directly.
 
-## Dependency rules
+Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToReviewerMention` accepts typed `issue_comment` data, uses the pure trigger policy for `@ai-reviewer`, `@claude`, and `/ai review`, rejects non-PR, closed, fork, and `ai-blocked` targets before response side effects, atomically claims the comment/head-SHA/body-revision tuple, and asks an injected responder only for analysis, explanation, risk clarification, or re-review signals. Concrete comment posting, model execution, persistence, and raw GitHub `issue_comment` enrichment remain adapter responsibilities; adapters must load PR metadata such as head SHA and fork status before calling the use case.
+
+Phase 3 adds only pure P1 policy contracts. `src/domain/fixer` owns reviewer actionable marker parsing for future fixer inputs, while `src/domain/policy` owns model-pair independence and `ai-autofix` eligibility. Actionable marker parsing requires a trusted reviewer summary source so adapters cannot pass arbitrary PR bodies, user comments, or repository content into the fixer contract. These modules decide whether a future adapter may start a read-only fixer analyze pass; they do not create patches, apply patches, push commits, approve, merge, or bypass CI.
+
+Phase 4 keeps the P1 loop contract in the domain layer. `src/domain/convergence` owns terminal-state decisions for delta verification, round caps, and oscillation detection, while `src/domain/review/orchestratorStateMarker.ts` parses hidden `ai-orchestrator` PR comment markers into typed audit state. The marker parser requires trusted orchestrator comment provenance and marks parsed data as `audit-only`; future adapters must keep authoritative loop state in their injected persistence such as SQLite. These contracts let adapters persist and recover loop context without moving GitHub comment reads, model execution, patch application, or status publishing into domain code.
+
+Phase 5 adds P2-H merge-gate contracts without adding merge side effects. `src/domain/merge` owns `ai-review/verdict` check conclusion mapping and conservative GitHub native auto-merge eligibility. These policies return data such as `success`, `failure`, `neutral`, `enable-github-auto-merge`, or explicit block reasons; adapters remain responsible for publishing check runs/statuses, managing labels, configuring branch protection, and invoking GitHub native auto-merge only when the domain decision allows it.
+
+Phase 6 adds P2-A/P3 guardrail contracts without adding autonomous side effects. `src/domain/operations` owns low-risk autonomous readiness decisions and operational follow-up planning. The autonomous readiness policy requires an explicit ADR amendment, low-risk path allowlist, trusted author allowlist, human-review relaxation approval, rollback procedure, latest successful verdict, required CI success, and branch protection before returning `allow-low-risk-autonomous-evaluation`. The operational follow-up planner returns alert reasons, recommended channels, and runbook ids as data only; adapters remain responsible for GitHub GraphQL, Slack/GitHub Discussion posting, rollback PR creation, and any concrete recovery execution.
+
+## Dependency Rules
 
 ```text
-src/project ─┐
-src/shared ──┼── may be imported by any source module
-src/domain ──┼── may import shared/project only when needed for static metadata
-src/app ─────┼── may import domain/shared/project and injected ports
-src/agents ──┼── may import app/domain/project context types only for harness construction
-src/orchestration ─ may import agents/domain/project to build P0 run plans without side effects
-src/adapters ┘   may import app/domain/shared/project and concrete SDKs
+src/project       -> static repository metadata
+src/shared        -> project-agnostic utilities and central runtime config parsing; importable by any layer
+src/domain        -> pure policies, contracts, and state; may import shared/project
+src/app           -> use cases and ports; may import domain/shared/project
+src/agents        -> role specs and harness builders; may import domain/project context types
+src/orchestration -> side-effect-free P0 run plans; may import agents/domain/project/shared
+src/adapters      -> concrete SDK, filesystem, network, shell, model, and GitHub implementations
 ```
 
-Forbidden dependency directions:
+Forbidden directions:
 
 - `src/domain` must not import `src/app` or `src/adapters`.
-- `src/app` must not hard-code a concrete model provider or GitHub SDK implementation.
+- `src/app` must not hard-code a model provider, GitHub SDK, shell command implementation, or persistence implementation.
 - `src/shared` must not contain project-specific PR review policy.
-- `src/agents` harnesses must stay side-effect free and must not hold secrets or GitHub tokens.
-- `src/orchestration` run-plan code must not execute shell commands directly; execution belongs behind adapters/ports.
-- Adapter code must not redefine domain policy; it should call domain/app modules.
+- `src/shared/config.ts` is the only TypeScript source module that may read `process.env`; adapter/runtime code should consume the exported typed config instead of reading env directly.
+- `src/agents` harnesses must not hold secrets, GitHub tokens, or hidden shared reviewer context.
+- `src/orchestration` run-plan code must not execute shell commands directly.
+- Adapter code must not redefine domain policy.
 
-## Why this matters
+## Why This Matters
 
-The ADR/PRD requires the system to stay vendor-neutral at the architecture layer while allowing concrete reviewer/fixer adapters. These boundaries keep the Reviewer R, Fixer F, Orchestrator, and Merge Gate independently testable and prevent a future agent from accidentally implementing a write-token model loop or formal-approval dependency before the approved phase.
-
-**v5 노트**: 오케스트레이터는 이제 자체 호스팅 서버이고, 이번 빌드는 두 모델의 **앵상블 리뷰**(자동 수정·Merge Gate는 future scope)다. 핵심 불변식은 (1) 두 리뷰어의 독립성, (2) PR 코드와 자격증명의 **샌드박스 격리**, (3) GitHub 토큰을 샌드박스에 주입하지 않는 것이다. 도메인은 여전히 순수하게 유지하고, 서버·git·샌드박스·모델 호출은 전부 adapter 뒤에 둔다.
+The ADR/PRD requires Reviewer, Fixer, Orchestrator, policy, and adapter concerns to remain separate. These boundaries prevent future phases from accidentally adding write-token fixer behavior, formal approval dependencies, fork secret access, or merge automation before the phase that explicitly allows them.

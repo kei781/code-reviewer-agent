@@ -1,14 +1,19 @@
-# Orchestration Boundary
+# Orchestration
 
-Orchestration coordinates domain decisions, adapter calls, local workspace setup, agent harness construction, PR markers, epochs, attempts, and audit trails.
+P0 orchestration code builds side-effect-free review-server run plans.
 
-For P0, the canonical runtime is the review server flow in `reviewServerPipeline.ts`:
+Allowed:
 
-1. receive a GitHub PR webhook,
-2. clone and checkout the PR branch locally,
-3. run the Claude Code MVP orchestrator,
-4. invoke Claude Code and Codex reviewer harnesses independently,
-5. cross-validate candidate findings against the local codebase,
-6. post only validated PR review comments.
+- assemble clone, fetch, and head-SHA checkout command plans,
+- assemble orchestrator and reviewer harness text,
+- combine domain/project/agent metadata into typed plans.
 
-Keep pure rules in `src/domain/**`, agent module/harness contracts in `src/agents/**`, and concrete external tool calls in `src/adapters/**`.
+Not allowed:
+
+- execute shell commands directly,
+- read secrets,
+- call GitHub SDKs,
+- call model SDKs,
+- post PR comments.
+
+Concrete execution belongs behind app ports and adapter implementations in later phases.

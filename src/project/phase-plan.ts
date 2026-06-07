@@ -1,6 +1,6 @@
 export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3" | "phase-4" | "phase-5" | "phase-6";
 
-export type PhaseStatus = "implementing" | "blocked-until-pr-comments-resolved" | "planned";
+export type PhaseStatus = "implemented" | "implementing" | "blocked-until-pr-comments-resolved" | "planned";
 
 export interface PhaseDefinition {
   readonly id: PhaseId;
@@ -16,28 +16,30 @@ export const implementationPhases = [
     id: "phase-0",
     title: "Repository structure and agent guardrails",
     description:
-      "Create a clear TypeScript project structure and durable agent rules before implementing runtime automation.",
+      "Create a clear TypeScript project structure, setup automation, logging, and durable agent rules before implementing runtime automation.",
     sourceRequirement: "User-requested phase0 plus ADR/PRD P0 readiness guidance",
-    status: "implementing",
+    status: "implemented",
     deliverables: [
       "Strict TypeScript baseline",
       "Human-readable source directory boundaries",
+      "Setup command for required local project infrastructure",
+      "Central log() helper for replaceable logging",
       "Future-agent guardrails in AGENTS.md",
       "Phase plan documenting PR-by-PR progression",
     ],
   },
   {
     id: "phase-1",
-    title: "P0 Reviewer Signal MVP",
+    title: "P0 Review-server Cross-validation MVP",
     description:
-      "Review same-repo PRs and publish structured review comments without formal approval, autofix, or merge automation.",
-    sourceRequirement: "ADR/PRD P0 Reviewer Signal MVP",
-    status: "blocked-until-pr-comments-resolved",
+      "Receive PR webhooks on the review server, prepare a local checkout, run independent Claude Code/Codex reviews, and publish only codebase-validated findings.",
+    sourceRequirement: "ADR/PRD P0 Review-server Cross-validation MVP",
+    status: "implemented",
     deliverables: [
-      "Same-repo PR guard",
-      "Structured review signal schema",
-      "Reviewer prompt contract",
-      "Review comment renderer and tests",
+      "Webhook intake port",
+      "Local git workspace adapter",
+      "Independent reviewer pass adapters",
+      "Codebase-backed cross-validation and PR comment posting",
     ],
   },
   {
@@ -46,7 +48,7 @@ export const implementationPhases = [
     description:
       "Respond to explicit reviewer mentions or commands while keeping review signals separate from approval.",
     sourceRequirement: "ADR/PRD explicit reviewer follow-up requirement",
-    status: "planned",
+    status: "implemented",
     deliverables: ["Mention parser", "Follow-up response contract", "SHA-aware dedupe tests"],
   },
   {
@@ -55,8 +57,8 @@ export const implementationPhases = [
     description:
       "Allow opt-in fixer analysis for actionable blockers while keeping model patch generation separate from write-token apply jobs.",
     sourceRequirement: "ADR/PRD P1 optional fixer autofix",
-    status: "planned",
-    deliverables: ["Actionable marker schema", "Patch artifact contract", "Apply policy gates"],
+    status: "implemented",
+    deliverables: ["Actionable marker schema", "Model-pair independence gate", "Autofix eligibility policy"],
   },
   {
     id: "phase-4",
@@ -64,7 +66,7 @@ export const implementationPhases = [
     description:
       "Re-review fixer deltas and declare convergence only when unresolved blockers are zero on the latest head SHA.",
     sourceRequirement: "ADR/PRD blocker-fixpoint convergence",
-    status: "planned",
+    status: "implemented",
     deliverables: ["State machine", "Hidden marker parser", "Round cap and oscillation handling"],
   },
   {
@@ -73,20 +75,22 @@ export const implementationPhases = [
     description:
       "Publish branch-protection-compatible verdict checks while preserving human final review.",
     sourceRequirement: "ADR/PRD P2-H conservative gate",
-    status: "planned",
+    status: "implemented",
     deliverables: ["ai-review/verdict abstraction", "Required check outcomes", "Native auto-merge policy"],
   },
   {
     id: "phase-6",
-    title: "P2-A and P3 advanced operations",
+    title: "P2-A approval and P3 operations guardrails",
     description:
-      "Add low-risk autonomous mode and operations features only after explicit policy approval.",
+      "Model low-risk autonomous readiness and operational follow-up without enabling side effects before explicit policy approval.",
     sourceRequirement: "ADR/PRD P2-A/P3 future scope",
-    status: "planned",
-    deliverables: ["Low-risk policy", "Reporting and alert hooks", "Recovery runbooks"],
+    status: "implemented",
+    deliverables: ["P2-A approval gate", "Low-risk path policy", "Operational alert plan", "Recovery runbook selection"],
   },
 ] as const satisfies readonly PhaseDefinition[];
 
 export function getFirstBlockedPhase(): PhaseDefinition | undefined {
-  return implementationPhases.find((phase) => phase.status === "blocked-until-pr-comments-resolved");
+  return (implementationPhases as readonly PhaseDefinition[]).find(
+    (phase) => phase.status === "blocked-until-pr-comments-resolved"
+  );
 }

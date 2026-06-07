@@ -1,9 +1,10 @@
-# Fixer Adapter Boundary
+# Fixer Adapters
 
-Fixer adapters are reserved for P1+.
+Fixer adapters are future P1+ scope.
 
-Rules:
+Do not add write-token fixer behavior in Phase 0. When P1 begins, fixer adapters must:
 
-- Analyze jobs propose patch artifacts with read-only repository permissions.
-- Apply jobs, not models, own write permissions.
-- Do not add fixer code to P0 review-server execution or reviewer harnesses.
+- require explicit `ai-autofix` opt-in,
+- process only actionable reviewer markers,
+- produce patch artifacts before any apply job,
+- avoid risky paths and fork PR secret/write access.

@@ -1,4 +1,4 @@
-import type { PullRequestReviewContext } from '../orchestration/reviewServerPipeline.js';
+import type { PullRequestReviewContext } from '../domain/review/pullRequestReviewContext.js';
 
 export function buildClaudeReviewerHarness(context: PullRequestReviewContext): string {
   return [

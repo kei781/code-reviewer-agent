@@ -1,9 +1,10 @@
-# Reviewer Adapter Boundary
+# Reviewer Adapters
 
-Reviewer adapters translate the role-level reviewer contract into a concrete model/action/tool invocation.
+Reviewer adapters will connect role-oriented reviewer contracts to concrete model providers or tools.
 
-Rules:
+P0 keeps runtime calls out of this directory. Later implementations should:
 
-- Keep vendor-specific configuration in adapter files or review-server inputs only.
-- Do not let adapter details leak into `src/domain/**`.
-- Reviewer adapters are read-only for P0 and must not submit formal approval as a required merge signal.
+- implement app ports,
+- keep reviewer execution read-only,
+- avoid formal approval assumptions,
+- avoid sharing hidden context between reviewer passes.

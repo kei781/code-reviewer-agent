@@ -1,16 +1,7 @@
 import { buildClaudeReviewerHarness } from '../agents/claudeReviewerHarness.js';
 import { buildCodexReviewerHarness } from '../agents/codexReviewerHarness.js';
 import { buildOrchestratorHarness } from '../agents/orchestratorHarness.js';
-
-export interface PullRequestReviewContext {
-  readonly repositoryUrl: string;
-  readonly repositoryFullName: string;
-  readonly pullRequestNumber: number;
-  readonly baseBranch: string;
-  readonly headBranch: string;
-  readonly headSha: string;
-  readonly localWorkspacePath: string;
-}
+import type { PullRequestReviewContext } from '../domain/review/pullRequestReviewContext.js';
 
 export type ReviewServerSetupRequirement =
   | 'codex-cli-installed'
@@ -42,8 +33,8 @@ export const reviewServerSetupRequirements = [
 export function buildWorkspaceSyncCommands(context: PullRequestReviewContext): readonly GitCommandPlan[] {
   return [
     { command: 'git', args: ['clone', context.repositoryUrl, context.localWorkspacePath] },
-    { command: 'git', args: ['checkout', context.headBranch], cwd: context.localWorkspacePath },
-    { command: 'git', args: ['pull', 'origin', context.headBranch], cwd: context.localWorkspacePath }
+    { command: 'git', args: ['fetch', '--no-tags', 'origin', context.headBranch], cwd: context.localWorkspacePath },
+    { command: 'git', args: ['checkout', '--detach', context.headSha], cwd: context.localWorkspacePath }
   ];
 }
 

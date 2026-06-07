@@ -2,20 +2,113 @@ export { directoryRules, type DirectoryRule } from "./project/directory-map.js";
 export {
   getFirstBlockedPhase,
   implementationPhases,
-  type PhaseDefinition,
-  type PhaseId,
-  type PhaseStatus,
+  type PhaseDefinition as ProjectPhaseDefinition,
+  type PhaseId as ProjectPhaseId,
+  type PhaseStatus as ProjectPhaseStatus
 } from "./project/phase-plan.js";
+
+export type { PhaseDefinition, PhaseId, PhaseStatus } from "./shared/phase.js";
+export { log, resetLogSink, setLogSink, type LogEntry, type LogLevel, type LogOptions, type LogSink } from "./shared/log.js";
+export {
+  loadConfig,
+  loadConfigFromEnv,
+  requiredConfigKeys
+} from "./shared/config.js";
+export type {
+  Config,
+  ConfigEnvSource,
+  ConfigKey,
+  ConfigLoadResult,
+  InvalidConfigValue,
+  ModelConfig
+} from "./shared/config.js";
+export { implementationPhases as reviewServerImplementationPhases } from "./domain/workflow/phases.js";
 
 export type { MergeSignal, ReviewSignal } from "./domain/review/reviewSignal.js";
 export { decideP0ReviewerEligibility } from "./domain/policy/pullRequestPolicy.js";
 export type { PolicyDecision, PullRequestPolicyInput } from "./domain/policy/pullRequestPolicy.js";
 export { evaluateRiskyPaths, riskyPathPatterns } from "./domain/policy/riskyPathPolicy.js";
 export type { RiskyPathDecision, RiskyPathMatch, RiskyPathSeverity } from "./domain/policy/riskyPathPolicy.js";
+export { extractActionableMarkers } from "./domain/fixer/actionableMarker.js";
+export type { ActionableMarker, ActionableMarkerSource, ActionableSeverity } from "./domain/fixer/actionableMarker.js";
+export { decideModelPairIndependence } from "./domain/policy/modelPairPolicy.js";
+export type {
+  ModelIdentity,
+  ModelPairBlockReason,
+  ModelPairPolicyDecision,
+  ModelPairPolicyInput,
+  ModelPairWarning
+} from "./domain/policy/modelPairPolicy.js";
+export { decideAutofixEligibility } from "./domain/policy/autofixPolicy.js";
+export type {
+  AutofixBlockReason,
+  AutofixNextAction,
+  AutofixPolicyDecision,
+  AutofixPolicyInput,
+  AutofixRecommendedLabel
+} from "./domain/policy/autofixPolicy.js";
 export { reviewSummaryMarker, orchestratorStateMarkerPrefix, renderReviewMarkers } from "./domain/review/reviewMarker.js";
 export type { ReviewConvergenceState, ReviewMarkerMetadata } from "./domain/review/reviewMarker.js";
+export { parseOrchestratorStateMarkers } from "./domain/review/orchestratorStateMarker.js";
+export type {
+  OrchestratorMarkerAuthority,
+  OrchestratorRuntimeState,
+  OrchestratorStateMarkerSource,
+  OrchestratorStateMarkers,
+  OrchestratorTerminalState
+} from "./domain/review/orchestratorStateMarker.js";
+export { decideConvergenceState } from "./domain/convergence/convergenceState.js";
+export type {
+  ConvergenceDecision,
+  ConvergencePassOrigin,
+  ConvergenceReason,
+  ConvergenceRecommendedLabel,
+  ConvergenceState,
+  ConvergenceStateInput,
+  ConvergenceTerminalState
+} from "./domain/convergence/convergenceState.js";
+export { decideVerdictCheck } from "./domain/merge/verdictCheck.js";
+export type {
+  VerdictCheckConclusion,
+  VerdictCheckInput,
+  VerdictCheckName,
+  VerdictCheckPublication,
+  VerdictCheckReason
+} from "./domain/merge/verdictCheck.js";
+export { decideConservativeMergeGate } from "./domain/merge/mergeGatePolicy.js";
+export type {
+  ConservativeMergeGateBlockReason,
+  ConservativeMergeGateDecision,
+  ConservativeMergeGateInput,
+  ConservativeMergeGateNextAction,
+  ConservativeMergeGateRecommendedLabel,
+  ConservativeMergeMethod,
+  RequiredCheckConclusion,
+  RequiredCheckStatus
+} from "./domain/merge/mergeGatePolicy.js";
+export { decideAutonomousReadiness } from "./domain/operations/autonomousReadiness.js";
+export type {
+  AutonomousPolicyApproval,
+  AutonomousReadinessBlockReason,
+  AutonomousReadinessDecision,
+  AutonomousReadinessInput,
+  AutonomousReadinessNextAction,
+  AutonomousReadinessRecommendedLabel
+} from "./domain/operations/autonomousReadiness.js";
+export { planOperationalFollowUp } from "./domain/operations/operationalFollowUp.js";
+export type {
+  OperationalAlertReason,
+  OperationalFollowUpInput,
+  OperationalFollowUpPlan,
+  OperationalRecommendedChannel,
+  OperationalRunbookId
+} from "./domain/operations/operationalFollowUp.js";
 export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/reviewerTriggerPolicy.js";
 export type { ReviewerTriggerDecision } from "./domain/policy/reviewerTriggerPolicy.js";
+export { validateFindingForPublication } from "./domain/review/crossValidation.js";
+export type { CandidateReviewFinding, CodebaseEvidence, CrossValidatedFinding } from "./domain/review/crossValidation.js";
+export type { PullRequestReviewContext } from "./domain/review/pullRequestReviewContext.js";
+
 export { mvpOrchestratorAgent } from "./agents/orchestrator.js";
 export type { AgentModuleSpec } from "./agents/orchestrator.js";
 export { claudeReviewerAgent } from "./agents/claudeReviewer.js";
@@ -23,17 +116,73 @@ export { codexReviewerAgent } from "./agents/codexReviewer.js";
 export { buildOrchestratorHarness } from "./agents/orchestratorHarness.js";
 export { buildClaudeReviewerHarness } from "./agents/claudeReviewerHarness.js";
 export { buildCodexReviewerHarness } from "./agents/codexReviewerHarness.js";
-export { validateFindingForPublication } from "./domain/review/crossValidation.js";
-export type { CandidateReviewFinding, CodebaseEvidence, CrossValidatedFinding } from "./domain/review/crossValidation.js";
+
 export {
   buildReviewServerRunPlan,
   buildWorkspaceSyncCommands,
-  reviewServerSetupRequirements,
+  reviewServerSetupRequirements
 } from "./orchestration/reviewServerPipeline.js";
 export type {
   GitCommandPlan,
-  PullRequestReviewContext,
   ReviewServerRunPlan,
-  ReviewServerSetupRequirement,
+  ReviewServerSetupRequirement
 } from "./orchestration/reviewServerPipeline.js";
-export { implementationPhases as reviewServerImplementationPhases } from "./domain/workflow/phases.js";
+
+export { runEnsembleReview } from "./app/runEnsembleReview.js";
+export type {
+  HumanReviewReason,
+  OrchestratedReviewResult,
+  PullRequestWebhookAction,
+  PullRequestWebhookEvent,
+  ReviewClaimResult,
+  ReviewFailurePublication,
+  ReviewFailureRecord,
+  ReviewFailureStage,
+  ReviewOrchestratorPort,
+  ReviewPassOrigin,
+  ReviewPublication,
+  ReviewPublicationSummary,
+  ReviewPublishedRecord,
+  ReviewPublisherPort,
+  ReviewRecommendedLabel,
+  ReviewRunResult,
+  ReviewServerPorts,
+  ReviewSkipPublication,
+  ReviewSkipReason,
+  ReviewStateKey,
+  ReviewStateRecord,
+  ReviewStateStorePort,
+  ReviewWorkspacePort,
+  WorkspacePreparationRequest
+} from "./app/runEnsembleReview.js";
+
+export {
+  followUpAllowedResponseActions,
+  followUpBlockingLabels,
+  respondToReviewerMention
+} from "./app/respondToReviewerMention.js";
+export type {
+  FollowUpBlockingLabel,
+  FollowUpClaimResult,
+  FollowUpFailurePublication,
+  FollowUpFailureRecord,
+  FollowUpFailureStage,
+  FollowUpPublisherPort,
+  FollowUpRespondedRecord,
+  FollowUpResponderPort,
+  FollowUpResponse,
+  FollowUpResponseAction,
+  FollowUpResponsePublication,
+  FollowUpResponseRequest,
+  FollowUpResponseScope,
+  FollowUpRunResult,
+  FollowUpSkipPublication,
+  FollowUpSkipReason,
+  FollowUpStateKey,
+  FollowUpStateRecord,
+  FollowUpStateStorePort,
+  ReviewerMentionCommentAction,
+  ReviewerMentionCommentEvent,
+  ReviewerMentionPorts,
+  ReviewerTriggerAlias
+} from "./app/respondToReviewerMention.js";

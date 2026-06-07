@@ -1,147 +1,97 @@
-# Phase 0 Directory Structure and Agent Guardrails
+# Phase 0 Directory Structure
 
-Phase 0 establishes the repository layout that later phases must preserve. The goal is a structure that a human can scan quickly and that future agents can extend without breaking role boundaries.
+Phase 0 makes the project easy to inspect and safe to extend. It does not implement runtime review execution, autofix, formal approval, thread resolution, or merge automation.
 
 ## Source of Truth
 
-This layout follows the latest root-level documents:
-
-- `ADR.md` v4: architecture is role-oriented, with Reviewer (R), Fixer (F), Orchestrator, and Merge Gate separated from adapter details.
-- `PRD.md` v4 plus the latest user correction: P0 review execution is webhook-driven through a local review server, with Claude Code as MVP orchestrator and Claude Code/Codex as independent reviewer agents.
+- `ADR.md`: v5 self-hosted review-server correction, with Reviewer/Fixer/Orchestrator/policy/adapter separation.
+- `PRD.md`: P0 review-server cross-validation MVP.
+- `docs/superpowers/specs/2026-06-04-frontier-pair-self-hosted-orchestrator-design.md`: detailed v5 design.
 
 ## Directory Map
 
 ```text
-.
-├── ADR.md
-├── PRD.md
-├── docs/
-│   ├── IMPLEMENTATION_PHASES.md
-│   └── PHASE0_DIRECTORY_STRUCTURE.md
-├── package.json
-├── tsconfig.json
-├── src/
-│   ├── adapters/
-│   │   ├── fixer/
-│   │   └── reviewer/
-│   ├── agents/
-│   ├── config/
-│   ├── domain/
-│   │   ├── policy/
-│   │   ├── review/
-│   │   └── workflow/
-│   ├── orchestration/
-│   └── shared/
-└── .github/
-    ├── ai/
-    │   ├── adapters/
-    │   └── prompts/
-    └── workflows/
+src/
+|-- domain/
+|   |-- policy/
+|   |-- review/
+|   `-- workflow/
+|-- app/
+|-- adapters/
+|   |-- reviewer/
+|   `-- fixer/
+|-- agents/
+|-- orchestration/
+|-- project/
+`-- shared/
+
+.github/
+`-- ai/
+    |-- adapters/
+    `-- prompts/
 ```
 
 ## Ownership Rules
 
-### `docs/`
+### `src/domain`
 
-Human-facing design and operating documents live here.
+Pure reusable business rules, policies, state machines, and typed contracts live here. Domain code must not read process env, touch the filesystem, execute shell commands, call GitHub SDKs, or call model SDKs.
 
-- Add phase plans, runbooks, and policy explanations here.
-- Do not put executable workflow logic here.
-- Do not duplicate ADR/PRD requirements; reference them and explain implementation decisions.
+### `src/app`
 
-### `src/shared/`
+Use cases and ports live here. App code coordinates domain rules through injected dependencies. It may define ports for GitHub, git workspaces, sandbox runners, state stores, queues, orchestrators, and reviewer passes.
 
-Stable TypeScript primitives live here.
+### `src/adapters`
 
-- Keep modules small and reusable across phases.
-- Avoid business rules, GitHub-specific behavior, and model-specific logic.
-- Export types and utility primitives that do not require external services.
+Concrete integrations live here. Adapters may call GitHub SDKs, model providers, the filesystem, shell commands, SQLite, and container runtimes, but they must implement ports rather than redefining domain policy.
 
-### `src/domain/`
+### `src/agents`
 
-Pure business rules live here.
+P0 agent role specs and same-level harness builders live here.
 
-- `src/domain/review/`: review signal and verdict concepts.
-- `src/domain/policy/`: guard decisions such as draft, closed, fork, risky path, labels, and attempts.
-- `src/domain/workflow/`: phase/state definitions independent of a concrete runner.
-- Domain modules must not import from `src/adapters/` or `.github/**`.
+- `orchestrator.ts` and `orchestratorHarness.ts`
+- `claudeReviewer.ts` and `claudeReviewerHarness.ts`
+- `codexReviewer.ts` and `codexReviewerHarness.ts`
 
-### `src/agents/`
+Harnesses must require local checkout inspection and must keep Claude Code and Codex reviewer passes independent until candidate findings are complete.
 
-Review-server agent modules and their harnesses live here.
+### `src/orchestration`
 
-- `orchestrator.ts`: MVP judge/orchestrator, currently Claude Code.
-- `claudeReviewer.ts`: independent reviewer agent 1.
-- `codexReviewer.ts`: independent reviewer agent 2.
-- Each agent module must keep its harness as a sibling file at the same directory level, for example `orchestrator.ts` beside `orchestratorHarness.ts`.
-- Harnesses must require direct inspection of the local checkout before candidate findings and again during cross-validation.
+Side-effect-free run-plan construction lives here. P0 orchestration returns structured commands and harness text; it does not execute git, call GitHub, call models, read secrets, or post comments directly.
 
-### `src/adapters/`
+### `src/shared`
 
-Concrete external integrations live here.
+Project-agnostic helpers live here. The central `log()` helper belongs here so future log routing can be changed in one place.
 
-- `src/adapters/reviewer/`: reviewer model/action/tool adapters.
-- `src/adapters/fixer/`: fixer model/action/tool adapters for P1+.
-- Adapter modules may depend on domain contracts.
-- Adapter modules must not define source-of-truth policy decisions.
+### `src/project`
 
-### `src/config/`
+Repository-local metadata derived from ADR/PRD lives here, including phase plans and directory rules.
 
-Reusable runtime configuration helpers live here.
+### `.github/ai`
 
-- Keep secrets out of source control.
-- Prefer environment-variable names and validation helpers over concrete secret values.
-- Do not hard-code vendor-specific model choices in domain modules.
+Role-oriented prompt and adapter reference files live here. Provider-specific runtime wiring belongs in adapters or external review-server configuration.
 
-### `src/orchestration/`
+### `.github/workflows`
 
-Workflow coordination lives here.
+P0 does not run AI review through repository-hosted GitHub Actions. If later phases add workflows, they must be dispatcher/status helpers unless ADR/PRD are amended.
 
-- Coordinate review-server webhook intake, local clone/checkout/pull setup, agent harness construction, cross-validation, PR markers, epochs, attempts, and audit trails.
-- Keep pure rule evaluation in `src/domain/**`.
-- Keep concrete tool invocation details in `src/adapters/**`.
+## Anti-breakage Rules
 
-### `.github/ai/prompts/`
+1. Do not put vendor-specific model logic in `src/domain`.
+2. Do not move agent harnesses away from their same-level agent modules.
+3. Do not add write-capable fixer behavior to P0.
+4. Do not treat reviewer comments as formal approvals or merge authorization.
+5. Do not introduce fork secret access, branch-protection bypass, or auto-merge before the phase that explicitly allows it.
+6. Do not write directly to the console outside a `log()` helper.
+7. Do not duplicate executable policy only in prompts; reusable policy belongs in TypeScript modules.
 
-Role-oriented prompts live here.
-
-- P0 reviewer prompts must preserve structured output markers.
-- P1 fixer prompts must only address actionable reviewer items.
-- Prompts should describe untrusted PR content as untrusted input.
-
-### `.github/ai/adapters/`
-
-Workflow-facing adapter configuration lives here when needed.
-
-- Use role names first and vendor names second.
-- Do not make vendor configuration part of the architecture contract.
-
-### `.github/workflows/`
-
-P0 does not run AI review through repository-hosted GitHub Actions.
-
-- GitHub PR events are delivered to the external review server as webhooks.
-- Later workflows, if any, must be dispatcher/status helpers and must not replace local codebase-backed cross-validation.
-- Do not add direct AI-review workflow execution unless a later ADR/PRD update explicitly changes the review-server architecture.
-
-## Anti-breakage Rules for Future Agents
-
-1. Do not flatten `src/domain`, `src/adapters`, `src/orchestration`, and `src/shared` into a single utilities directory.
-2. Do not put vendor-specific model logic in `src/domain/**`.
-3. Do not add write-capable fixer behavior to P0 review-server execution.
-4. Do not move agent harness files away from their same-level agent module siblings.
-5. Do not treat reviewer comments as formal approvals or merge authorization.
-6. Do not start a later phase until the previous phase PR has all comments resolved.
-7. Do not bypass fork, draft, closed, risky-path, label, branch-protection, or human-review gates when those gates apply.
-8. Do not duplicate policy rules in prompts only; executable policy must live in TypeScript domain/orchestration modules as phases mature.
-9. Do not store secrets, tokens, or concrete model credentials in the repository.
-10. Do not remove README boundary files unless the same guidance is preserved in a clearer location.
-
-## Phase 0 Completion Checklist
+## Phase 0 Checklist
 
 - [x] TypeScript project metadata exists.
-- [x] Reusable module namespaces exist.
-- [x] GitHub AI prompt directory exists, and workflow directory documents that P0 review execution is webhook/review-server based.
-- [x] Directory ownership is documented.
-- [x] Future-agent anti-breakage rules are documented.
-- [x] Review-server, local checkout, Claude Code/Codex independent review, and codebase-backed cross-validation architecture is documented.
+- [x] Source directories have clear ownership.
+- [x] Agent modules and same-level harnesses exist.
+- [x] Review-server run-plan scaffold exists without side effects.
+- [x] Setup automation installs npm dependencies and verifies the build.
+- [x] POSIX shell bootstrap can prepare Node.js locally before setup on macOS/Linux.
+- [x] Central logging helper exists.
+- [x] Tests cover the scaffold.
