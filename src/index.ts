@@ -42,3 +42,23 @@ export type {
   ReviewServerRunPlan,
   ReviewServerSetupRequirement
 } from "./orchestration/reviewServerPipeline.js";
+
+export { runEnsembleReview } from "./app/runEnsembleReview.js";
+export type {
+  OrchestratedReviewResult,
+  PullRequestWebhookAction,
+  PullRequestWebhookEvent,
+  ReviewOrchestratorPort,
+  ReviewPublication,
+  ReviewPublicationSummary,
+  ReviewPublisherPort,
+  ReviewRunResult,
+  ReviewServerPorts,
+  ReviewSkipPublication,
+  ReviewSkipReason,
+  ReviewStateKey,
+  ReviewStateRecord,
+  ReviewStateStorePort,
+  ReviewWorkspacePort,
+  WorkspacePreparationRequest
+} from "./app/runEnsembleReview.js";
