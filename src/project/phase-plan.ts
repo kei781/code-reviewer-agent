@@ -66,7 +66,7 @@ export const implementationPhases = [
     description:
       "Re-review fixer deltas and declare convergence only when unresolved blockers are zero on the latest head SHA.",
     sourceRequirement: "ADR/PRD blocker-fixpoint convergence",
-    status: "implementing",
+    status: "implemented",
     deliverables: ["State machine", "Hidden marker parser", "Round cap and oscillation handling"],
   },
   {
@@ -75,7 +75,7 @@ export const implementationPhases = [
     description:
       "Publish branch-protection-compatible verdict checks while preserving human final review.",
     sourceRequirement: "ADR/PRD P2-H conservative gate",
-    status: "planned",
+    status: "implementing",
     deliverables: ["ai-review/verdict abstraction", "Required check outcomes", "Native auto-merge policy"],
   },
   {
