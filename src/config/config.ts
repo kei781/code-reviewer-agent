@@ -1,4 +1,4 @@
-export const requiredReviewServerEnvKeys = [
+export const requiredConfigKeys = [
   "REVIEW_SERVER_HOST",
   "REVIEW_SERVER_PORT",
   "REVIEW_SERVER_DATABASE_PATH",
@@ -32,13 +32,13 @@ export const requiredReviewServerEnvKeys = [
   "RISKY_PATH_PATTERNS"
 ] as const;
 
-export type ReviewServerEnvKey = (typeof requiredReviewServerEnvKeys)[number];
+export type ConfigKey = (typeof requiredConfigKeys)[number];
 
-export type ReviewServerEnvSource = {
+export type ConfigEnvSource = {
   readonly [key: string]: string | undefined;
 };
 
-export interface RuntimeModelConfig {
+export interface ModelConfig {
   readonly provider: string;
   readonly model: string;
   readonly modelFamily: string;
@@ -46,7 +46,7 @@ export interface RuntimeModelConfig {
   readonly apiKey: string;
 }
 
-export interface ReviewServerRuntimeConfig {
+export interface Config {
   readonly server: {
     readonly host: string;
     readonly port: number;
@@ -60,8 +60,8 @@ export interface ReviewServerRuntimeConfig {
     readonly owner: string;
     readonly repo: string;
   };
-  readonly reviewer: RuntimeModelConfig;
-  readonly fixer: RuntimeModelConfig;
+  readonly reviewer: ModelConfig;
+  readonly fixer: ModelConfig;
   readonly modelEgressAllowlist: readonly string[];
   readonly policy: {
     readonly maxFixAttempts: number;
@@ -80,30 +80,34 @@ export interface ReviewServerRuntimeConfig {
   };
 }
 
-export interface InvalidReviewServerEnvValue {
-  readonly key: ReviewServerEnvKey;
+export interface InvalidConfigValue {
+  readonly key: ConfigKey;
   readonly reason: string;
 }
 
-export type ReviewServerRuntimeConfigLoadResult =
+export type ConfigLoadResult =
   | {
       readonly ok: true;
-      readonly config: ReviewServerRuntimeConfig;
+      readonly config: Config;
     }
   | {
       readonly ok: false;
-      readonly missingKeys: readonly ReviewServerEnvKey[];
-      readonly invalidValues: readonly InvalidReviewServerEnvValue[];
+      readonly missingKeys: readonly ConfigKey[];
+      readonly invalidValues: readonly InvalidConfigValue[];
     };
 
-export function loadReviewServerRuntimeConfig(env: ReviewServerEnvSource): ReviewServerRuntimeConfigLoadResult {
-  const missingKeys = requiredReviewServerEnvKeys.filter((key) => readEnvValue(env, key) === undefined);
+export function loadConfig(): ConfigLoadResult {
+  return loadConfigFromEnv(process.env);
+}
+
+export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
+  const missingKeys = requiredConfigKeys.filter((key) => readEnvValue(env, key) === undefined);
 
   if (missingKeys.length > 0) {
     return { ok: false, missingKeys, invalidValues: [] };
   }
 
-  const invalidValues: InvalidReviewServerEnvValue[] = [];
+  const invalidValues: InvalidConfigValue[] = [];
   const port = readPositiveInteger(env, "REVIEW_SERVER_PORT", invalidValues);
   const maxFixAttempts = readPositiveInteger(env, "MAX_FIX_ATTEMPTS", invalidValues);
 
@@ -161,12 +165,12 @@ export function loadReviewServerRuntimeConfig(env: ReviewServerEnvSource): Revie
   };
 }
 
-function readEnvValue(env: ReviewServerEnvSource, key: ReviewServerEnvKey): string | undefined {
+function readEnvValue(env: ConfigEnvSource, key: ConfigKey): string | undefined {
   const value = env[key]?.trim();
   return value === "" ? undefined : value;
 }
 
-function requiredValue(env: ReviewServerEnvSource, key: ReviewServerEnvKey): string {
+function requiredValue(env: ConfigEnvSource, key: ConfigKey): string {
   const value = readEnvValue(env, key);
 
   if (value === undefined) {
@@ -176,7 +180,7 @@ function requiredValue(env: ReviewServerEnvSource, key: ReviewServerEnvKey): str
   return value;
 }
 
-function readCsv(env: ReviewServerEnvSource, key: ReviewServerEnvKey): readonly string[] {
+function readCsv(env: ConfigEnvSource, key: ConfigKey): readonly string[] {
   return requiredValue(env, key)
     .split(",")
     .map((entry) => entry.trim())
@@ -184,9 +188,9 @@ function readCsv(env: ReviewServerEnvSource, key: ReviewServerEnvKey): readonly 
 }
 
 function readPositiveInteger(
-  env: ReviewServerEnvSource,
-  key: ReviewServerEnvKey,
-  invalidValues: InvalidReviewServerEnvValue[]
+  env: ConfigEnvSource,
+  key: ConfigKey,
+  invalidValues: InvalidConfigValue[]
 ): number | undefined {
   const rawValue = requiredValue(env, key);
   const parsed = Number.parseInt(rawValue, 10);

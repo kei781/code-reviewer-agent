@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
-import { loadReviewServerRuntimeConfig, requiredReviewServerEnvKeys } from "../../index.js";
+import { loadConfigFromEnv, requiredConfigKeys } from "../../index.js";
 
 describe("review server runtime env config", () => {
   const completeEnv = {
@@ -42,7 +43,7 @@ describe("review server runtime env config", () => {
     const example = readFileSync(".env.example", "utf8");
     const gitignore = readFileSync(".gitignore", "utf8");
 
-    for (const key of requiredReviewServerEnvKeys) {
+    for (const key of requiredConfigKeys) {
       assert.match(example, new RegExp(`^${key}=`, "mu"));
     }
 
@@ -52,7 +53,7 @@ describe("review server runtime env config", () => {
   });
 
   it("rejects missing config instead of falling back to hard-coded runtime values", () => {
-    const result = loadReviewServerRuntimeConfig({});
+    const result = loadConfigFromEnv({});
 
     assert.equal(result.ok, false);
 
@@ -65,7 +66,7 @@ describe("review server runtime env config", () => {
   });
 
   it("loads typed runtime config from the supplied environment source", () => {
-    const result = loadReviewServerRuntimeConfig(completeEnv);
+    const result = loadConfigFromEnv(completeEnv);
 
     assert.equal(result.ok, true);
 
@@ -90,4 +91,31 @@ describe("review server runtime env config", () => {
       assert.deepEqual(result.config.policy.lowRiskPathAllowlist, ["docs/**", "src/domain/**"]);
     }
   });
+
+  it("keeps process.env reads isolated to the central config module", () => {
+    const envReaders = listTypeScriptFiles("src")
+      .filter((path) => !path.includes(`${separator()}__tests__${separator()}`))
+      .filter((path) => readFileSync(path, "utf8").includes("process.env"));
+    const indexSource = readFileSync("src/index.ts", "utf8");
+
+    assert.deepEqual(envReaders, [join("src", "config", "config.ts")]);
+    assert.match(indexSource, /from "\.\/config\/config\.js"/u);
+  });
 });
+
+function listTypeScriptFiles(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+    const stats = statSync(path);
+
+    if (stats.isDirectory()) {
+      return listTypeScriptFiles(path);
+    }
+
+    return path.endsWith(".ts") ? [path] : [];
+  });
+}
+
+function separator(): string {
+  return /\\/u.test(join("a", "b")) ? "\\" : "/";
+}
