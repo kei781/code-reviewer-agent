@@ -46,6 +46,8 @@ Phase 4 keeps the P1 loop contract in the domain layer. `src/domain/convergence`
 
 Phase 5 adds P2-H merge-gate contracts without adding merge side effects. `src/domain/merge` owns `ai-review/verdict` check conclusion mapping and conservative GitHub native auto-merge eligibility. These policies return data such as `success`, `failure`, `neutral`, `enable-github-auto-merge`, or explicit block reasons; adapters remain responsible for publishing check runs/statuses, managing labels, configuring branch protection, and invoking GitHub native auto-merge only when the domain decision allows it.
 
+Phase 6 adds P2-A/P3 guardrail contracts without adding autonomous side effects. `src/domain/operations` owns low-risk autonomous readiness decisions and operational follow-up planning. The autonomous readiness policy requires an explicit ADR amendment, low-risk path allowlist, trusted author allowlist, human-review relaxation approval, rollback procedure, latest successful verdict, required CI success, and branch protection before returning `allow-low-risk-autonomous-evaluation`. The operational follow-up planner returns alert reasons, recommended channels, and runbook ids as data only; adapters remain responsible for GitHub GraphQL, Slack/GitHub Discussion posting, rollback PR creation, and any concrete recovery execution.
+
 ## Dependency Rules
 
 ```text

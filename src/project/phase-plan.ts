@@ -75,17 +75,17 @@ export const implementationPhases = [
     description:
       "Publish branch-protection-compatible verdict checks while preserving human final review.",
     sourceRequirement: "ADR/PRD P2-H conservative gate",
-    status: "implementing",
+    status: "implemented",
     deliverables: ["ai-review/verdict abstraction", "Required check outcomes", "Native auto-merge policy"],
   },
   {
     id: "phase-6",
-    title: "P2-A and P3 advanced operations",
+    title: "P2-A approval and P3 operations guardrails",
     description:
-      "Add low-risk autonomous mode and operations features only after explicit policy approval.",
+      "Model low-risk autonomous readiness and operational follow-up without enabling side effects before explicit policy approval.",
     sourceRequirement: "ADR/PRD P2-A/P3 future scope",
-    status: "planned",
-    deliverables: ["Low-risk policy", "Reporting and alert hooks", "Recovery runbooks"],
+    status: "implementing",
+    deliverables: ["P2-A approval gate", "Low-risk path policy", "Operational alert plan", "Recovery runbook selection"],
   },
 ] as const satisfies readonly PhaseDefinition[];
 

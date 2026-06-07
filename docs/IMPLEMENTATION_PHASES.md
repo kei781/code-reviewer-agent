@@ -85,7 +85,23 @@ Exit criteria:
 - Fixer attempts are capped.
 - Loops end as `CONVERGED_CLEAN`, `STALLED_OSCILLATING`, or `CAPPED_WITH_OPEN`.
 
-## Phase 4: P2-H Conservative Merge Gate
+## Phase 4: P1 Delta Verification and Convergence State
+
+Title: `P1: Add delta verification convergence state`
+
+Scope:
+
+- Decide `CONVERGED_CLEAN`, `STALLED_OSCILLATING`, `CAPPED_WITH_OPEN`, or `CONVERGING` from reviewer/fixer loop facts.
+- Parse hidden `ai-orchestrator` PR comment markers as audit-only recovery data.
+- Keep authoritative loop state behind future adapter persistence.
+
+Exit criteria:
+
+- Convergence requires latest-SHA PASS with zero unresolved blockers and no fixer-introduced blocker.
+- Stalled and capped states recommend human review.
+- No reviewer execution, patch application, status publishing, or merge behavior is added.
+
+## Phase 5: P2-H Conservative Merge Gate
 
 Title: `P2-H: Add human-gated AI merge verdict`
 
@@ -99,6 +115,17 @@ Exit criteria:
 
 - The merge gate never bypasses required checks, branch protection, human review, fork/risky-path blocks, or blocking labels.
 
-## Phase 5: P2-A and P3 Advanced Operations
+## Phase 6: P2-A Approval and P3 Advanced Operations
 
-P2-A requires a separate ADR amendment before any autonomous low-risk merge behavior. P3 may add operations features such as thread tracking, reporting, alerts, cost summaries, and recovery workflows after the earlier phases are stable.
+Title: `P2-A/P3: Add advanced operations guardrails`
+
+Scope:
+
+- Model P2-A autonomous readiness as a pure approval gate requiring an explicit ADR amendment, low-risk path allowlist, trusted author allowlist, human-review relaxation approval, rollback procedure, latest successful verdict, CI success, and branch protection.
+- Model P3 operational follow-up as data: alert reasons, recommended channels, and recovery runbook ids.
+- Keep GraphQL thread operations, Slack/GitHub Discussion posting, rollback PR creation, and autonomous merge execution outside this phase.
+
+Exit criteria:
+
+- Autonomous readiness returns only `allow-low-risk-autonomous-evaluation` or `skip`; it does not merge.
+- Operational follow-up returns plan data only; adapters own all side effects.

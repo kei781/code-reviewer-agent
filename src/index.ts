@@ -73,6 +73,23 @@ export type {
   RequiredCheckConclusion,
   RequiredCheckStatus
 } from "./domain/merge/mergeGatePolicy.js";
+export { decideAutonomousReadiness } from "./domain/operations/autonomousReadiness.js";
+export type {
+  AutonomousPolicyApproval,
+  AutonomousReadinessBlockReason,
+  AutonomousReadinessDecision,
+  AutonomousReadinessInput,
+  AutonomousReadinessNextAction,
+  AutonomousReadinessRecommendedLabel
+} from "./domain/operations/autonomousReadiness.js";
+export { planOperationalFollowUp } from "./domain/operations/operationalFollowUp.js";
+export type {
+  OperationalAlertReason,
+  OperationalFollowUpInput,
+  OperationalFollowUpPlan,
+  OperationalRecommendedChannel,
+  OperationalRunbookId
+} from "./domain/operations/operationalFollowUp.js";
 export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/reviewerTriggerPolicy.js";
 export type { ReviewerTriggerDecision } from "./domain/policy/reviewerTriggerPolicy.js";
 export { validateFindingForPublication } from "./domain/review/crossValidation.js";
