@@ -111,3 +111,10 @@ Expected: all checks pass; `rg` has no direct `console.log` matches.
 - Spec coverage: ADR D14, D15, D16 and PRD FR-013/FR-014 P2-H acceptance criteria are covered.
 - Scope check: No GitHub SDK calls, shell merge commands, branch-protection bypass, approval substitution, or write-token behavior is included.
 - Type consistency: new exported names are `decideVerdictCheck`, `decideConservativeMergeGate`, `VerdictCheckPublication`, and `ConservativeMergeGateDecision`.
+
+## Review Follow-up
+
+- Converted verdict tests to table-driven coverage for success, failure, neutral, and `not-ready`.
+- Converted merge-gate tests to table-driven coverage for every block reason, including `stale-human-review`.
+- Covered empty required checks and failed required checks under `ci-not-success`.
+- Covered optional and required risky path label recommendations separately.
