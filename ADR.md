@@ -29,6 +29,25 @@
 
 ---
 
+## 0. v5 개정 (2026-06-04) — 자체 호스팅 앵상블 리뷰로 전환
+
+본 ADR은 원래 "**GitHub Actions 오케스트레이터 + Reviewer R / Fixer F 자동수정 / blocker-0 수렴 루프**"를 채택했다(아래 §1~ 원문 보존). v5에서 다음을 **개정**한다. 상세 설계: `docs/superpowers/specs/2026-06-04-frontier-pair-self-hosted-orchestrator-design.md`.
+
+**개정 결정 (원 결정 대체):**
+- **오케스트레이터**: GitHub Actions → **자체 호스팅 webhook 서버 + 격리(샌드박스) 에이전트 세션**. (원 §3 Decision Summary, §5 역할표, D1·D3·D10·D11·D14~D18의 GHA 전제를 대체)
+- **파이프라인 모델**: "R 리뷰 → F 자동수정 → delta 재검증 → blocker-0 수렴" → **두 동급 프론티어 모델의 독립 리뷰 → 코드베이스 기반 교차검증 → 유효 finding만 게시**. 자동 Fixer/apply/수렴 루프는 **future scope로 이연**(D7·D9·D10·D11 등). 수정 여부는 사람이 결정.
+- **역할 재해석**: 이번 빌드에서 Codex는 Fixer가 아니라 **두 번째 독립 리뷰어**. R≠F 독립성은 "두 리뷰어" 사이로 유지.
+- **코드 접근**: diff/marker → **PR 브랜치 풀 체크아웃**(서버측 fetch, 읽기전용으로 샌드박스 주입).
+- **상태 저장**: PR comment marker 단일 진실 → **SQLite(제어) + PR 코멘트(사람용 audit) 하이브리드**.
+- **보안/격리 (신규)**: 샌드박스에 GitHub 토큰·App private key 미주입(fetch·게시 모두 서버측), egress=모델 API만, PR 통제 코드 실행 기본 금지.
+
+**유지되는 불변식**: R≠F 동급 프론티어·model-family 독립성, 독립적 실패 모드(생성 단계), fork/risky-path/secret 보안, prompt injection 방어, human-in-the-loop(수정·merge는 사람), 벤더 중립 코어+어댑터, blocker/suggestion 분리.
+- **D4 부분 완화**: Claude가 리뷰어 A이자 교차검증자를 겸하므로 **판정 단계의 중립성은 부분 완화**됨(생성은 독립). 완전 중립이 필요하면 교차검증을 서버측 분리 reconcile로 승격.
+
+> 아래 §1~ 원문은 역사적 맥락으로 보존한다. 본 §0와 충돌하는 서술은 §0가 우선한다.
+
+---
+
 ## 1. Context
 
 `sql-agent`는 자연어를 SQL로 변환하는 보안 민감 저장소다. PR 리뷰에서는 일반적인 코드 품질뿐 아니라 다음 항목이 반복적으로 확인되어야 한다.
