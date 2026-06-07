@@ -28,11 +28,12 @@ The repository is intentionally split by responsibility so each module can be re
 - `src/adapters/HttpWebhookServer` — GitHub App webhook 수신 + HMAC 검증
 - `src/adapters/GitHubAppAdapter` — Octokit + 설치토큰 발급 + 코멘트/인라인 게시 (서버측)
 - `src/adapters/GitCliAdapter` — clone/checkout/pull (서버측, 읽기전용 작업공간 생성)
-- `src/adapters/ContainerSandboxAdapter` — 격리 컨테이너 실행 (egress allowlist, GitHub 토큰 미주입)
-- `src/adapters/ClaudeCodeAgentAdapter` — 격리 세션에서 Claude+Codex 독립 리뷰·교차검증 → findings JSON
+- `src/adapters/ContainerSandboxAdapter` — 격리 컨테이너 실행 (egress allowlist 강제, GitHub 토큰 미주입, PR 에이전트 설정 중화)
+- `src/adapters/ClaudeCodeOrchestratorAdapter` — `OrchestratorPort` MVP 구현: 격리 세션에서 Reviewer 패스 spawn + 코드기반 교차검증 (교체 대상 — 추후 `ServerReconcileOrchestrator`)
+- `src/adapters/ClaudeReviewerPassAdapter` / `CodexReviewerPassAdapter` — 각각 fresh-context 단일 모델 리뷰 → findings JSON
 - `src/adapters/SqliteStateAdapter`, `SqliteQueueAdapter` — 제어 상태 · 경량 큐
 
-app 계층에는 `RunEnsembleReview` 유스케이스와 `GitHubPort/GitWorkspacePort/SandboxRunnerPort/StateStorePort/QueuePort`가 추가된다. 도메인 경계 규칙(아래)은 그대로다.
+app 계층에는 `RunEnsembleReview` 유스케이스와 `GitHubPort/GitWorkspacePort/OrchestratorPort/ReviewerPassPort/SandboxRunnerPort/StateStorePort/QueuePort`가 추가된다. 도메인 경계 규칙(아래)은 그대로다.
 
 ## Dependency rules
 

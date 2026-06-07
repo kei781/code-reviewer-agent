@@ -152,7 +152,7 @@ issue_comment[@mention]  → INTERACTIVE 잡 (선택, read-only)
 ```text
 guard(same-repo·non-draft·non-closed·SHA 미검토·입력한도) 통과?  (실패→skip+사유 코멘트)
   ▼
-서버측에서 일회용 작업공간에 clone+checkout+pull (PR head). GitHub fetch 자격증명은 서버에만.
+서버측에서 일회용 작업공간에 clone + **webhook payload의 head SHA로 checkout 고정**(브랜치 tip 아님 → TOCTOU/stale 방지). GitHub fetch 자격증명은 서버에만.
   ▼
 작업공간을 "읽기전용"으로 샌드박스에 주입 + 모델 토큰만 전달 (GitHub 토큰·App key 미주입)
   ▼
@@ -209,7 +209,7 @@ pr_review_state  PK(repo, pr_number)
 - **GitHub 자격증명 샌드박스 미노출**: App private key·설치토큰은 **서버에만**. clone/pull(fetch)도 서버측에서 수행하고, 게시(인라인·요약)도 서버측 GitHubPort가 수행. 따라서 **샌드박스에는 GitHub 토큰이 아예 들어가지 않는다** (공격면 축소; 다이어그램의 "모델토큰만" 경계가 실제와 일치).
 - **PR 코드 실행 최소화**: 기본 리뷰는 코드 "읽기/탐색"(checkout는 문맥용). 빌드/설치/테스트 등 **PR 통제 코드 실행은 기본 금지**. 실행이 꼭 필요하면 egress 차단된 격리에서만.
 - **에이전트 설정 주입 차단**: 체크아웃된 PR 브랜치의 `.claude/`(hooks·settings), 루트 `CLAUDE.md`·`AGENTS.md`, codex 설정 등은 에이전트가 자동 로드 시 **PR이 통제하는 지시/코드 실행 벡터**다. 샌드박스는 PR 제공 에이전트 설정을 **무시/중화**하고 서버가 주입한 리뷰 설정만 사용한다(PR의 `.claude/hooks` 등 비활성).
-- **git 실행 벡터 차단**: clone/checkout/pull은 git hooks·`.gitattributes` clean/smudge filter를 실행시킬 수 있다(서버측 fetch라 호스트에서 실행 → 특히 위험). `core.hooksPath=/dev/null`, filter 비활성, `GIT_CONFIG_NOSYSTEM`/`GIT_CONFIG_GLOBAL=/dev/null`로 무력화한 채 fetch한다.
+- **git 실행 벡터 차단**: clone/checkout/pull은 git hooks·`.gitattributes` clean/smudge filter를 실행시킬 수 있다(서버측 fetch라 호스트에서 실행 → 특히 위험). 환경변수(`GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_GLOBAL=/dev/null`)만으론 **PR이 주입한 per-repo `.git/config`/`.gitattributes`** 를 못 막으므로, **bare/mirror로 받아 작업트리 체크아웃 전** `core.hooksPath=/dev/null`·`filter.*` 비활성·`core.fsmonitor=false`를 강제 적용하고 신뢰 config만 사용한다. 체크아웃은 위 head SHA로만.
 - **Egress allowlist**: 샌드박스 네트워크는 **모델 API(api.anthropic.com / openai 등)만** 허용. GitHub fetch·게시가 서버측이라 샌드박스엔 github 접근이 불필요 → allowlist 최소. 강제는 **컨테이너 network namespace + 아웃바운드 방화벽/프록시 allowlist**로 구현(앱 레벨 신뢰 아님). 그 외 차단으로 exfil 방지.
 - **모델 토큰 노출 최소화**: 모델 호출용 토큰만 샌드박스에 필요. egress 제한 + PR 코드 비실행으로 탈취면을 줄인다.
 - **fork PR**: 시크릿/write 금지(읽기 전용 리뷰만 선택). risky path(`.github/workflows/**`, `auth/**`, `secrets/**`, `*.pem`, `.env*`): `security-sensitive` + 자동 처리 제한.
@@ -235,7 +235,7 @@ pr_review_state  PK(repo, pr_number)
 - **app (fake 포트)**: `RunEnsembleReview`를 fake GitWorkspace/SandboxRunner/GitHub로 — guard 통과/실패, dedup, 게시 호출, skip 경로를 결정론 검증. (SandboxRunner는 캔드 findings JSON 반환 fake)
 - **adapters (얇은 통합)**: HMAC, SQLite, GitCli(임시 repo), ContainerSandbox(스텁 명령), GitHubAppAdapter(녹화 fixture).
 - **에이전트 리뷰 품질**: 단위 테스트 대상 아님(프롬프트/모델 의존) → 소수의 **골든 PR 픽스처로 eval/통합**(합의·오탐 비율 관찰). 결정론 보장은 서버 경계까지.
-- 테스트 러너: `node --test "dist/**/*.test.js"`(디렉터리 인자 no-op 회피). 추가로 CI에서 **discovered test count > 0**을 단언해 silent-pass(빌드 누락·glob 미스)를 차단.
+- 테스트 러너: `node --test "dist/**/*.test.js"`(디렉터리 인자 no-op 회피). 추가로 **discovered test count > 0**을 단언해 silent-pass(빌드 누락·glob 미스)를 차단. (이 단언을 담는 **CI 워크플로 자체가 P0a 산출물** — 현재는 없음)
 
 ---
 
