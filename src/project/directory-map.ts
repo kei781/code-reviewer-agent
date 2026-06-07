@@ -10,7 +10,7 @@ export const directoryRules = [
     path: "src/domain",
     purpose: "Pure reusable policies, typed contracts, state machines, and convergence rules.",
     mayDependOn: ["src/shared", "src/project"],
-    mustNotContain: ["GitHub SDK calls", "model SDK calls", "process.env reads", "filesystem writes", "shell execution"]
+    mustNotContain: ["GitHub SDK calls", "model SDK calls", "environment variable reads", "filesystem writes", "shell execution"]
   },
   {
     path: "src/app",
