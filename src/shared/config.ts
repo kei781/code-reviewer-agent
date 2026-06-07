@@ -8,27 +8,21 @@ export const requiredConfigKeys = [
   "GITHUB_WEBHOOK_SECRET",
   "GITHUB_OWNER",
   "GITHUB_REPO",
-  "REVIEWER_PROVIDER",
-  "REVIEWER_MODEL",
-  "REVIEWER_MODEL_FAMILY",
-  "REVIEWER_ADAPTER",
-  "REVIEWER_API_KEY",
-  "FIXER_PROVIDER",
-  "FIXER_MODEL",
-  "FIXER_MODEL_FAMILY",
-  "FIXER_ADAPTER",
-  "FIXER_API_KEY",
+  "CLAUDE_REVIEWER_PROVIDER",
+  "CLAUDE_REVIEWER_MODEL",
+  "CLAUDE_REVIEWER_MODEL_FAMILY",
+  "CLAUDE_REVIEWER_ADAPTER",
+  "CLAUDE_REVIEWER_API_KEY",
+  "CODEX_REVIEWER_PROVIDER",
+  "CODEX_REVIEWER_MODEL",
+  "CODEX_REVIEWER_MODEL_FAMILY",
+  "CODEX_REVIEWER_ADAPTER",
+  "CODEX_REVIEWER_API_KEY",
   "MODEL_EGRESS_ALLOWLIST",
-  "MAX_FIX_ATTEMPTS",
-  "AUTOFIX_LABEL",
-  "AUTOMERGE_LABEL",
   "HUMAN_REVIEW_LABEL",
   "SECURITY_SENSITIVE_LABEL",
   "DO_NOT_MERGE_LABEL",
   "TRUSTED_REVIEWERS",
-  "TRUSTED_FIXERS",
-  "TRUSTED_AUTHORS",
-  "LOW_RISK_PATH_ALLOWLIST",
   "RISKY_PATH_PATTERNS"
 ] as const;
 
@@ -60,22 +54,18 @@ export interface Config {
     readonly owner: string;
     readonly repo: string;
   };
-  readonly reviewer: ModelConfig;
-  readonly fixer: ModelConfig;
+  readonly reviewers: {
+    readonly claudeCode: ModelConfig;
+    readonly codex: ModelConfig;
+  };
   readonly modelEgressAllowlist: readonly string[];
   readonly policy: {
-    readonly maxFixAttempts: number;
     readonly labels: {
-      readonly autofix: string;
-      readonly automerge: string;
       readonly humanReview: string;
       readonly securitySensitive: string;
       readonly doNotMerge: string;
     };
     readonly trustedReviewers: readonly string[];
-    readonly trustedFixers: readonly string[];
-    readonly trustedAuthors: readonly string[];
-    readonly lowRiskPathAllowlist: readonly string[];
     readonly riskyPathPatterns: readonly string[];
   };
 }
@@ -109,7 +99,6 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
 
   const invalidValues: InvalidConfigValue[] = [];
   const port = readPositiveInteger(env, "REVIEW_SERVER_PORT", invalidValues);
-  const maxFixAttempts = readPositiveInteger(env, "MAX_FIX_ATTEMPTS", invalidValues);
   const modelEgressAllowlist = readNonEmptyCsv(
     env,
     "MODEL_EGRESS_ALLOWLIST",
@@ -120,7 +109,6 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
   if (
     invalidValues.length > 0 ||
     port === undefined ||
-    maxFixAttempts === undefined ||
     modelEgressAllowlist === undefined
   ) {
     return { ok: false, missingKeys: [], invalidValues };
@@ -142,34 +130,30 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
         owner: requiredValue(env, "GITHUB_OWNER"),
         repo: requiredValue(env, "GITHUB_REPO")
       },
-      reviewer: {
-        provider: requiredValue(env, "REVIEWER_PROVIDER"),
-        model: requiredValue(env, "REVIEWER_MODEL"),
-        modelFamily: requiredValue(env, "REVIEWER_MODEL_FAMILY"),
-        adapter: requiredValue(env, "REVIEWER_ADAPTER"),
-        apiKey: requiredValue(env, "REVIEWER_API_KEY")
-      },
-      fixer: {
-        provider: requiredValue(env, "FIXER_PROVIDER"),
-        model: requiredValue(env, "FIXER_MODEL"),
-        modelFamily: requiredValue(env, "FIXER_MODEL_FAMILY"),
-        adapter: requiredValue(env, "FIXER_ADAPTER"),
-        apiKey: requiredValue(env, "FIXER_API_KEY")
+      reviewers: {
+        claudeCode: {
+          provider: requiredValue(env, "CLAUDE_REVIEWER_PROVIDER"),
+          model: requiredValue(env, "CLAUDE_REVIEWER_MODEL"),
+          modelFamily: requiredValue(env, "CLAUDE_REVIEWER_MODEL_FAMILY"),
+          adapter: requiredValue(env, "CLAUDE_REVIEWER_ADAPTER"),
+          apiKey: requiredValue(env, "CLAUDE_REVIEWER_API_KEY")
+        },
+        codex: {
+          provider: requiredValue(env, "CODEX_REVIEWER_PROVIDER"),
+          model: requiredValue(env, "CODEX_REVIEWER_MODEL"),
+          modelFamily: requiredValue(env, "CODEX_REVIEWER_MODEL_FAMILY"),
+          adapter: requiredValue(env, "CODEX_REVIEWER_ADAPTER"),
+          apiKey: requiredValue(env, "CODEX_REVIEWER_API_KEY")
+        }
       },
       modelEgressAllowlist,
       policy: {
-        maxFixAttempts,
         labels: {
-          autofix: requiredValue(env, "AUTOFIX_LABEL"),
-          automerge: requiredValue(env, "AUTOMERGE_LABEL"),
           humanReview: requiredValue(env, "HUMAN_REVIEW_LABEL"),
           securitySensitive: requiredValue(env, "SECURITY_SENSITIVE_LABEL"),
           doNotMerge: requiredValue(env, "DO_NOT_MERGE_LABEL")
         },
         trustedReviewers: readCsv(env, "TRUSTED_REVIEWERS"),
-        trustedFixers: readCsv(env, "TRUSTED_FIXERS"),
-        trustedAuthors: readCsv(env, "TRUSTED_AUTHORS"),
-        lowRiskPathAllowlist: readCsv(env, "LOW_RISK_PATH_ALLOWLIST"),
         riskyPathPatterns: readCsv(env, "RISKY_PATH_PATTERNS")
       }
     }
