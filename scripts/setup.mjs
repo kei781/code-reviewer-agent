@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 function log(message, metadata = undefined) {
@@ -48,10 +48,28 @@ function ensureFile(path, content) {
   log("Created file", { path });
 }
 
+function readPackageJson() {
+  return JSON.parse(readFileSync("package.json", "utf8"));
+}
+
+function logVoltaPins(packageJson) {
+  const volta = packageJson.volta;
+  if (volta === undefined) {
+    return;
+  }
+
+  log("Using package Volta pins", {
+    node: volta.node,
+    npm: volta.npm
+  });
+}
+
 const majorVersion = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
 if (majorVersion < 24) {
   throw new Error(`Node.js >=24 is required for this setup script. Current version is ${process.versions.node}.`);
 }
+
+logVoltaPins(readPackageJson());
 
 const requiredDirectories = [
   ".github/ai/prompts",

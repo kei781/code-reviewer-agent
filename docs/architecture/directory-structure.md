@@ -38,6 +38,8 @@ The P0 scaffold therefore models this flow as data:
 
 Concrete webhook, GitHub, git, sandbox, state, and model calls belong behind ports/adapters. Phase 1 starts this by adding an app-level `RunEnsembleReview` use case that accepts typed webhook event data, atomically claims review work through an injected state port, deduplicates posted finding fingerprints, and coordinates injected ports without calling concrete integrations directly.
 
+Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToReviewerMention` accepts typed `issue_comment` data, uses the pure trigger policy for `@ai-reviewer`, `@claude`, and `/ai review`, rejects non-PR, closed, fork, and `ai-blocked` targets before response side effects, atomically claims the comment/head-SHA/body-revision tuple, and asks an injected responder only for analysis, explanation, risk clarification, or re-review signals. Concrete comment posting, model execution, persistence, and raw GitHub `issue_comment` enrichment remain adapter responsibilities; adapters must load PR metadata such as head SHA and fork status before calling the use case.
+
 ## Dependency Rules
 
 ```text

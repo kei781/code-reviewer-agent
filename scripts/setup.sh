@@ -2,6 +2,7 @@
 set -eu
 
 NODE_VERSION="${NODE_VERSION:-24.14.0}"
+NPM_VERSION="${NPM_VERSION:-10.9.0}"
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 TOOLS_DIR="$REPO_ROOT/.tools/node"
@@ -104,7 +105,18 @@ ensure_local_node() {
   printf '%s\n' "$node_home"
 }
 
+ensure_volta_node() {
+  log "Using Volta to install Node.js $NODE_VERSION and npm $NPM_VERSION"
+  volta install "node@$NODE_VERSION" "npm@$NPM_VERSION" >&2
+}
+
 select_node_home() {
+  if command_exists volta; then
+    ensure_volta_node
+    printf 'VOLTA\n'
+    return
+  fi
+
   if command_exists node; then
     existing_node=$(command -v node)
     major=$(node_major_version "$existing_node")
@@ -120,9 +132,16 @@ select_node_home() {
   ensure_local_node
 }
 
+cd "$REPO_ROOT"
 NODE_HOME=$(select_node_home)
-PATH="$NODE_HOME/bin:$PATH"
-export PATH
 
-log "Using Node.js $("$NODE_HOME/bin/node" -p 'process.versions.node')"
-"$NODE_HOME/bin/node" "$REPO_ROOT/scripts/setup.mjs"
+if [ "$NODE_HOME" = "VOLTA" ]; then
+  log "Using Volta-pinned Node.js $(volta run node -p 'process.versions.node') and npm $(volta run npm --version)"
+  volta run node "$REPO_ROOT/scripts/setup.mjs"
+else
+  PATH="$NODE_HOME/bin:$PATH"
+  export PATH
+
+  log "Using Node.js $("$NODE_HOME/bin/node" -p 'process.versions.node')"
+  "$NODE_HOME/bin/node" "$REPO_ROOT/scripts/setup.mjs"
+fi

@@ -19,16 +19,20 @@ describe("implementation phase plan", () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
-  it("marks phase 0 as the current implementation phase", () => {
-    const currentPhase = implementationPhases.find((phase) => phase.id === "phase-0");
+  it("marks phase 2 as the current implementation phase", () => {
+    const currentPhase = implementationPhases.find((phase) => phase.id === "phase-2");
 
     assert.equal(currentPhase?.status, "implementing");
   });
 
-  it("blocks the first future phase until phase 0 PR comments are resolved", () => {
+  it("records merged phases as implemented without stale review blockers", () => {
+    const phase0 = implementationPhases.find((phase) => phase.id === "phase-0");
+    const phase1 = implementationPhases.find((phase) => phase.id === "phase-1");
     const firstBlockedPhase = getFirstBlockedPhase();
 
-    assert.equal(firstBlockedPhase?.id, "phase-1");
+    assert.equal(phase0?.status, "implemented");
+    assert.equal(phase1?.status, "implemented");
+    assert.equal(firstBlockedPhase, undefined);
   });
 });
 
@@ -89,15 +93,22 @@ describe("logger", () => {
 });
 
 describe("setup bootstrap", () => {
-  it("provides a POSIX shell bootstrap that installs Node locally before running setup", () => {
+  it("provides Volta pins and a POSIX bootstrap that installs pinned Node before running setup", () => {
     const script = readFileSync("scripts/setup.sh", "utf8");
     const gitignore = readFileSync(".gitignore", "utf8");
     const gitAttributes = readFileSync(".gitattributes", "utf8");
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      engines?: Record<string, string>;
       scripts?: Record<string, string>;
+      volta?: Record<string, string>;
     };
 
+    assert.equal(packageJson.engines?.node, ">=24.0.0");
+    assert.equal(packageJson.volta?.node, "24.14.0");
+    assert.equal(packageJson.volta?.npm, "10.9.0");
     assert.match(script, /^#!\/bin\/sh/u);
+    assert.match(script, /NPM_VERSION="\$\{NPM_VERSION:-10\.9\.0\}"/u);
+    assert.match(script, /volta install "node@\$NODE_VERSION" "npm@\$NPM_VERSION"/u);
     assert.match(script, /nodejs\.org\/dist\/v\$NODE_VERSION/u);
     assert.match(script, /\.tools\/node/u);
     assert.match(script, /scripts\/setup\.mjs/u);

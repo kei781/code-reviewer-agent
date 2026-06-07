@@ -1,6 +1,6 @@
 export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3" | "phase-4" | "phase-5" | "phase-6";
 
-export type PhaseStatus = "implementing" | "blocked-until-pr-comments-resolved" | "planned";
+export type PhaseStatus = "implemented" | "implementing" | "blocked-until-pr-comments-resolved" | "planned";
 
 export interface PhaseDefinition {
   readonly id: PhaseId;
@@ -18,7 +18,7 @@ export const implementationPhases = [
     description:
       "Create a clear TypeScript project structure, setup automation, logging, and durable agent rules before implementing runtime automation.",
     sourceRequirement: "User-requested phase0 plus ADR/PRD P0 readiness guidance",
-    status: "implementing",
+    status: "implemented",
     deliverables: [
       "Strict TypeScript baseline",
       "Human-readable source directory boundaries",
@@ -34,7 +34,7 @@ export const implementationPhases = [
     description:
       "Receive PR webhooks on the review server, prepare a local checkout, run independent Claude Code/Codex reviews, and publish only codebase-validated findings.",
     sourceRequirement: "ADR/PRD P0 Review-server Cross-validation MVP",
-    status: "blocked-until-pr-comments-resolved",
+    status: "implemented",
     deliverables: [
       "Webhook intake port",
       "Local git workspace adapter",
@@ -48,7 +48,7 @@ export const implementationPhases = [
     description:
       "Respond to explicit reviewer mentions or commands while keeping review signals separate from approval.",
     sourceRequirement: "ADR/PRD explicit reviewer follow-up requirement",
-    status: "planned",
+    status: "implementing",
     deliverables: ["Mention parser", "Follow-up response contract", "SHA-aware dedupe tests"],
   },
   {
@@ -90,5 +90,7 @@ export const implementationPhases = [
 ] as const satisfies readonly PhaseDefinition[];
 
 export function getFirstBlockedPhase(): PhaseDefinition | undefined {
-  return implementationPhases.find((phase) => phase.status === "blocked-until-pr-comments-resolved");
+  return (implementationPhases as readonly PhaseDefinition[]).find(
+    (phase) => phase.status === "blocked-until-pr-comments-resolved"
+  );
 }
