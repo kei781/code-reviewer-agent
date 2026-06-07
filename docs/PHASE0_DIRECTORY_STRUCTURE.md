@@ -92,5 +92,6 @@ P0 does not run AI review through repository-hosted GitHub Actions. If later pha
 - [x] Agent modules and same-level harnesses exist.
 - [x] Review-server run-plan scaffold exists without side effects.
 - [x] Setup automation installs npm dependencies and verifies the build.
+- [x] POSIX shell bootstrap can prepare Node.js locally before setup on macOS/Linux.
 - [x] Central logging helper exists.
 - [x] Tests cover the scaffold.
