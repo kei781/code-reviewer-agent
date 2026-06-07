@@ -15,6 +15,8 @@ The repository is intentionally split by responsibility so each module can be re
 │   ├── domain/                    # Pure policies, types, state machines
 │   ├── app/                       # Use cases and orchestration ports
 │   ├── adapters/                  # GitHub/model/runtime implementations
+│   ├── agents/                    # P0 agent specs and same-level harness contracts
+│   ├── orchestration/             # P0 review-server run-plan scaffold
 │   ├── shared/                    # Generic utilities
 │   └── project/                   # Repo-local phase and directory metadata
 ├── package.json
@@ -33,6 +35,8 @@ The repository is intentionally split by responsibility so each module can be re
 - `src/adapters/ClaudeReviewerPassAdapter` / `CodexReviewerPassAdapter` — 각각 fresh-context 단일 모델 리뷰 → findings JSON
 - `src/adapters/SqliteStateAdapter`, `SqliteQueueAdapter` — 제어 상태 · 경량 큐
 
+이번 P0 scaffold는 agent 책임과 harness prompt를 함께 감사하기 위해 `src/agents/*`에 module/harness sibling pair를 둔다. `src/orchestration/reviewServerPipeline.ts`는 webhook 서버 구현이 아니라 clone/checkout/pull 및 harness 조립을 표현하는 run-plan scaffold다. 실제 서버, GitHub, git, sandbox, model 호출은 추후 `src/app` port와 `src/adapters` 구현으로 이동/연결한다.
+
 app 계층에는 `RunEnsembleReview` 유스케이스와 `GitHubPort/GitWorkspacePort/OrchestratorPort/ReviewerPassPort/SandboxRunnerPort/StateStorePort/QueuePort`가 추가된다. 도메인 경계 규칙(아래)은 그대로다.
 
 ## Dependency rules
@@ -42,6 +46,8 @@ src/project ─┐
 src/shared ──┼── may be imported by any source module
 src/domain ──┼── may import shared/project only when needed for static metadata
 src/app ─────┼── may import domain/shared/project and injected ports
+src/agents ──┼── may import app/domain/project context types only for harness construction
+src/orchestration ─ may import agents/domain/project to build P0 run plans without side effects
 src/adapters ┘   may import app/domain/shared/project and concrete SDKs
 ```
 
@@ -50,6 +56,8 @@ Forbidden dependency directions:
 - `src/domain` must not import `src/app` or `src/adapters`.
 - `src/app` must not hard-code a concrete model provider or GitHub SDK implementation.
 - `src/shared` must not contain project-specific PR review policy.
+- `src/agents` harnesses must stay side-effect free and must not hold secrets or GitHub tokens.
+- `src/orchestration` run-plan code must not execute shell commands directly; execution belongs behind adapters/ports.
 - Adapter code must not redefine domain policy; it should call domain/app modules.
 
 ## Why this matters

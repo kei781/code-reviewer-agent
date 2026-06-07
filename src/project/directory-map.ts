@@ -24,6 +24,19 @@ export const directoryRules = [
     mayDependOn: ["src/app", "src/domain", "src/shared", "src/project"],
     mustNotContain: ["new domain policy definitions", "R/F role conflation", "unaudited write-token model loops"],
   },
+
+  {
+    path: "src/agents",
+    purpose: "P0 agent role specs and same-level harness contracts for Claude Code orchestration and Claude/Codex reviewer passes.",
+    mayDependOn: ["src/domain", "src/project"],
+    mustNotContain: ["GitHub tokens", "model API keys", "shell execution", "network calls"],
+  },
+  {
+    path: "src/orchestration",
+    purpose: "Side-effect-free P0 review-server run-plan scaffold that assembles git sync commands and agent harnesses.",
+    mayDependOn: ["src/agents", "src/domain", "src/project"],
+    mustNotContain: ["direct shell execution", "GitHub SDK calls", "model SDK calls", "secret reads"],
+  },
   {
     path: "src/shared",
     purpose: "Project-agnostic utility helpers.",

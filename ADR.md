@@ -6,6 +6,26 @@
 - **범위**: GitHub Pull Request 생성 이후의 자동 리뷰, 선택적 자동수정, 재검증, 수렴 판정, 조건부 merge gate
 - **관련 PRD**: `PRD.md`
 - **갱신 (v4)**: 벤더 중심 표현을 역할 중심으로 재정의. 핵심 목표를 `Claude/Codex 연동`이 아니라 **서로 다른 동급 프론티어 모델 두 개가 Reviewer(R) / Fixer(F)를 나눠 맡고, R이 더 이상 blocker를 찾지 못하는 fixpoint 상태로 PR을 수렴시키는 것**으로 명시.
+- **갱신 (v5)**: P0 실행 형태를 GitHub Actions 직접 실행이 아니라 **외부 리뷰서버 webhook → 로컬 clone/checkout/pull → Claude Code 오케스트레이터 → Claude Code/Codex 독립 리뷰 → 코드베이스 기반 교차검증 → PR inline comment 게시** 흐름으로 정정한다.
+
+---
+
+## 0. v5 개정 (2026-06-04) — 자체 호스팅 앵상블 리뷰로 전환
+
+본 ADR은 원래 "**GitHub Actions 오케스트레이터 + Reviewer R / Fixer F 자동수정 / blocker-0 수렴 루프**"를 채택했다(아래 §1~ 원문 보존). v5에서 다음을 **개정**한다. 상세 설계: `docs/superpowers/specs/2026-06-04-frontier-pair-self-hosted-orchestrator-design.md`.
+
+**개정 결정 (원 결정 대체):**
+- **오케스트레이터**: GitHub Actions → **자체 호스팅 webhook 서버 + 격리(샌드박스) 에이전트 세션**. (원 §3 Decision Summary, §5 역할표, D1·D3·D10·D11·D14~D18의 GHA 전제를 대체)
+- **파이프라인 모델**: "R 리뷰 → F 자동수정 → delta 재검증 → blocker-0 수렴" → **두 동급 프론티어 모델의 독립 리뷰 → 코드베이스 기반 교차검증 → 유효 finding만 게시**. 자동 Fixer/apply/수렴 루프는 **future scope로 이연**(D7·D9·D10·D11 등). 수정 여부는 사람이 결정.
+- **역할 재해석**: 이번 빌드에서 Codex는 Fixer가 아니라 **두 번째 독립 리뷰어**. R≠F 독립성은 "두 리뷰어" 사이로 유지.
+- **코드 접근**: diff/marker → **PR 브랜치 풀 체크아웃**(서버측 fetch, 읽기전용으로 샌드박스 주입).
+- **상태 저장**: PR comment marker 단일 진실 → **SQLite(제어) + PR 코멘트(사람용 audit) 하이브리드**.
+- **보안/격리 (신규)**: 샌드박스에 GitHub 토큰·App private key 미주입(fetch·게시 모두 서버측), egress=모델 API만, PR 통제 코드 실행 기본 금지.
+
+**유지되는 불변식**: R≠F 동급 프론티어·model-family 독립성, 독립적 실패 모드(생성 단계), fork/risky-path/secret 보안, prompt injection 방어, human-in-the-loop(수정·merge는 사람), 벤더 중립 코어+어댑터, blocker/suggestion 분리.
+- **D4 부분 완화**: Claude가 리뷰어 A이자 교차검증자를 겸하므로 **판정 단계의 중립성은 부분 완화**됨(생성은 독립). 완전 중립이 필요하면 교차검증을 서버측 분리 reconcile로 승격.
+
+> 아래 §1~ 원문은 역사적 맥락으로 보존한다. 본 §0와 충돌하는 서술은 §0가 우선한다.
 
 ---
 
@@ -158,6 +178,30 @@ fork PR:
 ```
 
 ---
+
+## 2.1 P0 Runtime Correction — Review Server First
+
+최신 P0 실행 형태는 repository-hosted GitHub Actions가 직접 AI 리뷰를 수행하는 방식이 아니다. GitHub은 PR 생성/변경 이벤트를 리뷰서버 webhook으로 전달하고, 리뷰서버가 로컬 workspace에서 다음 순서로 코드베이스를 준비한다.
+
+```text
+git clone <repo> <workspace>
+git -C <workspace> checkout <branch>
+git -C <workspace> pull origin <branch>
+```
+
+이 로컬 checkout은 단순 편의가 아니라 교차검증의 근거다. Claude Code와 Codex가 독립적으로 후보 리뷰를 만든 뒤, 오케스트레이터는 반드시 checkout된 실제 파일과 diff를 다시 열어 후보 지적을 검증해야 한다. 코드베이스 evidence가 없는 후보는 PR comment로 게시하지 않는다.
+
+P0 agent topology는 다음과 같다.
+
+```text
+review server
+└── local PR branch workspace
+    └── orchestrator: Claude Code (MVP judge)
+        ├── reviewer agent 1: Claude Code
+        └── reviewer agent 2: Codex
+```
+
+오케스트레이터와 reviewer agent 1/2의 harness는 각 agent module과 같은 레벨에 둔다. 이 규칙은 harness prompt와 agent 책임을 함께 감사할 수 있게 하기 위한 구조적 제약이다.
 
 ## 3. Decision Summary
 
@@ -775,16 +819,17 @@ FIXER_ACTION_OR_ADAPTER: repository variable
 
 ### P0 완료 기준
 
-- reviewer review workflow가 `main`에 존재한다.
-- same-repo PR opened/synchronize/reopened/ready_for_review에서 reviewer workflow가 실행된다.
-- draft, closed, fork PR은 정책에 따라 skip된다.
-- reviewer output은 structured PR comment이며 `MERGE_SIGNAL`, reviewed SHA, reviewer model metadata를 포함한다.
-- blocker와 suggestion이 분리된다.
-- `sql-agent` safety checklist가 포함된다.
-- 명시적 reviewer mention/command에 read-only 후속 응답을 한다.
+- GitHub PR webhook이 외부 리뷰서버로 전달된다.
+- 리뷰서버가 대상 repository와 PR branch를 로컬 workspace에 `git clone`, `git checkout`, `git pull origin <branch>` 순서로 준비한다.
+- Codex, Claude Code, Claude Code↔Codex plugin/tooling 사전설정이 문서화된다.
+- agent topology가 명확하다: 오케스트레이터는 Claude Code, reviewer agent 1은 Claude Code, reviewer agent 2는 Codex다.
+- 각 agent module과 같은 레벨에 harness가 존재한다.
+- Claude Code와 Codex는 독립적으로 후보 리뷰를 만든다.
+- 오케스트레이터는 후보 finding을 로컬 코드베이스와 PR diff로 교차검증한다.
+- 코드베이스 evidence가 없는 finding은 PR comment로 게시하지 않는다.
+- reviewer output은 structured PR comment이며 reviewed SHA, agent identity, cross-validation 결과를 포함한다.
 - reviewer는 formal approve/review 제출을 필수 전제로 삼지 않는다.
-- 실패와 skip reason이 workflow log 또는 PR comment에 남는다.
-- 최종 approve/merge는 사람이 수행한다.
+- 최종 resolve, 추가개발 지시, approve/merge는 사람이 수행한다.
 
 ### P1 완료 기준
 
