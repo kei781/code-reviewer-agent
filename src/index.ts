@@ -36,6 +36,24 @@ export type {
 } from "./domain/policy/autofixPolicy.js";
 export { reviewSummaryMarker, orchestratorStateMarkerPrefix, renderReviewMarkers } from "./domain/review/reviewMarker.js";
 export type { ReviewConvergenceState, ReviewMarkerMetadata } from "./domain/review/reviewMarker.js";
+export { parseOrchestratorStateMarkers } from "./domain/review/orchestratorStateMarker.js";
+export type {
+  OrchestratorMarkerAuthority,
+  OrchestratorRuntimeState,
+  OrchestratorStateMarkerSource,
+  OrchestratorStateMarkers,
+  OrchestratorTerminalState
+} from "./domain/review/orchestratorStateMarker.js";
+export { decideConvergenceState } from "./domain/convergence/convergenceState.js";
+export type {
+  ConvergenceDecision,
+  ConvergencePassOrigin,
+  ConvergenceReason,
+  ConvergenceRecommendedLabel,
+  ConvergenceState,
+  ConvergenceStateInput,
+  ConvergenceTerminalState
+} from "./domain/convergence/convergenceState.js";
 export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/reviewerTriggerPolicy.js";
 export type { ReviewerTriggerDecision } from "./domain/policy/reviewerTriggerPolicy.js";
 export { validateFindingForPublication } from "./domain/review/crossValidation.js";

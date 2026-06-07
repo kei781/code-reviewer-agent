@@ -57,7 +57,7 @@ export const implementationPhases = [
     description:
       "Allow opt-in fixer analysis for actionable blockers while keeping model patch generation separate from write-token apply jobs.",
     sourceRequirement: "ADR/PRD P1 optional fixer autofix",
-    status: "implementing",
+    status: "implemented",
     deliverables: ["Actionable marker schema", "Model-pair independence gate", "Autofix eligibility policy"],
   },
   {
@@ -66,7 +66,7 @@ export const implementationPhases = [
     description:
       "Re-review fixer deltas and declare convergence only when unresolved blockers are zero on the latest head SHA.",
     sourceRequirement: "ADR/PRD blocker-fixpoint convergence",
-    status: "planned",
+    status: "implementing",
     deliverables: ["State machine", "Hidden marker parser", "Round cap and oscillation handling"],
   },
   {

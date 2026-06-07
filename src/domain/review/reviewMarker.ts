@@ -1,6 +1,11 @@
 import type { MergeSignal } from './reviewSignal.js';
 
-export type ReviewConvergenceState = 'CONVERGING' | 'CONVERGED_CLEAN' | 'HUMAN_REVIEW_REQUIRED';
+export type ReviewConvergenceState =
+  | 'CONVERGING'
+  | 'CONVERGED_CLEAN'
+  | 'STALLED_OSCILLATING'
+  | 'CAPPED_WITH_OPEN'
+  | 'HUMAN_REVIEW_REQUIRED';
 
 export interface ReviewMarkerMetadata {
   readonly reviewerModel: string;

@@ -19,23 +19,25 @@ describe("implementation phase plan", () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
-  it("marks phase 3 as the current implementation phase", () => {
-    const phase2 = implementationPhases.find((phase) => phase.id === "phase-2");
+  it("marks phase 4 as the current implementation phase", () => {
     const phase3 = implementationPhases.find((phase) => phase.id === "phase-3");
+    const phase4 = implementationPhases.find((phase) => phase.id === "phase-4");
 
-    assert.equal(phase2?.status, "implemented");
-    assert.equal(phase3?.status, "implementing");
+    assert.equal(phase3?.status, "implemented");
+    assert.equal(phase4?.status, "implementing");
   });
 
   it("records merged phases as implemented without stale review blockers", () => {
     const phase0 = implementationPhases.find((phase) => phase.id === "phase-0");
     const phase1 = implementationPhases.find((phase) => phase.id === "phase-1");
     const phase2 = implementationPhases.find((phase) => phase.id === "phase-2");
+    const phase3 = implementationPhases.find((phase) => phase.id === "phase-3");
     const firstBlockedPhase = getFirstBlockedPhase();
 
     assert.equal(phase0?.status, "implemented");
     assert.equal(phase1?.status, "implemented");
     assert.equal(phase2?.status, "implemented");
+    assert.equal(phase3?.status, "implemented");
     assert.equal(firstBlockedPhase, undefined);
   });
 });
