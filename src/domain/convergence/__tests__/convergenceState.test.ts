@@ -3,7 +3,8 @@ import { describe, it } from "node:test";
 import {
   decideConvergenceState,
   parseOrchestratorStateMarkers,
-  type ConvergenceStateInput
+  type ConvergenceStateInput,
+  type OrchestratorStateMarkerSource
 } from "../../../index.js";
 
 describe("convergence state machine", () => {
@@ -40,6 +41,21 @@ describe("convergence state machine", () => {
     assert.deepEqual(decision.recommendedLabels, ["needs-human-review"]);
   });
 
+  it("does not classify a first review with blockers as stalled", () => {
+    const decision = decideConvergenceState(
+      validConvergenceInput({
+        mergeSignal: "BLOCKED",
+        unresolvedBlockerCount: 2,
+        previousUnresolvedBlockerCount: 0,
+        fixAttempts: 0
+      })
+    );
+
+    assert.equal(decision.state, "CONVERGING");
+    assert.deepEqual(decision.reasons, ["open-blockers"]);
+    assert.deepEqual(decision.recommendedLabels, []);
+  });
+
   it("detects stalled oscillating loops when blockers do not decrease or classes repeat", () => {
     const nonDecreasing = decideConvergenceState(
       validConvergenceInput({
@@ -63,6 +79,22 @@ describe("convergence state machine", () => {
     assert.ok(repeatedClass.reasons.includes("repeated-blocker-class"));
   });
 
+  it("stalls immediately when a fixer diff introduces a blocker", () => {
+    const decision = decideConvergenceState(
+      validConvergenceInput({
+        mergeSignal: "BLOCKED",
+        unresolvedBlockerCount: 1,
+        previousUnresolvedBlockerCount: 2,
+        fixerDiffIntroducedBlocker: true,
+        fixAttempts: 1
+      })
+    );
+
+    assert.equal(decision.state, "STALLED_OSCILLATING");
+    assert.deepEqual(decision.reasons, ["fixer-diff-introduced-blocker"]);
+    assert.deepEqual(decision.recommendedLabels, ["needs-human-review"]);
+  });
+
   it("continues verification while blockers are strictly decreasing", () => {
     const decision = decideConvergenceState(
       validConvergenceInput({
@@ -79,8 +111,10 @@ describe("convergence state machine", () => {
 
 describe("orchestrator state markers", () => {
   it("parses hidden orchestrator state markers", () => {
-    const state = parseOrchestratorStateMarkers(`
+    const state = parseOrchestratorStateMarkers(
+      `
       <!-- ai-orchestrator:state=VERIFYING -->
+      <!-- ai-orchestrator:terminal-state=CONVERGED_CLEAN -->
       <!-- ai-orchestrator:epoch=2 -->
       <!-- ai-orchestrator:last-reviewer-reviewed-sha=sha2 -->
       <!-- ai-orchestrator:last-fixer-fixed-sha=sha1 -->
@@ -89,9 +123,14 @@ describe("orchestrator state markers", () => {
       <!-- ai-orchestrator:processed-blocker-ids=B1,B2 -->
       <!-- ai-orchestrator:blocker-history=B1:open->fixed->verified -->
       <!-- ai-orchestrator:last-fixer-run-id=run-42 -->
-    `);
+    `,
+      trustedOrchestratorSource
+    );
 
+    assert.equal(state.trustedSource, true);
+    assert.equal(state.authority, "audit-only");
     assert.equal(state.state, "VERIFYING");
+    assert.equal(state.terminalState, "CONVERGED_CLEAN");
     assert.equal(state.epoch, 2);
     assert.equal(state.lastReviewerReviewedSha, "sha2");
     assert.equal(state.lastFixerFixedSha, "sha1");
@@ -103,15 +142,51 @@ describe("orchestrator state markers", () => {
   });
 
   it("omits invalid numeric marker values instead of returning NaN", () => {
-    const state = parseOrchestratorStateMarkers(`
+    const state = parseOrchestratorStateMarkers(
+      `
       <!-- ai-orchestrator:epoch=not-a-number -->
       <!-- ai-orchestrator:fix-attempts=also-bad -->
       <!-- ai-orchestrator:processed-actionable-ids= A1, , A2 -->
-    `);
+    `,
+      trustedOrchestratorSource
+    );
 
     assert.equal(state.epoch, undefined);
     assert.equal(state.fixAttempts, undefined);
     assert.deepEqual(state.processedActionableIds, ["A1", "A2"]);
+  });
+
+  it("ignores orchestrator markers from untrusted comment authors", () => {
+    const state = parseOrchestratorStateMarkers(
+      `
+      <!-- ai-orchestrator:state=CONVERGED_CLEAN -->
+      <!-- ai-orchestrator:fix-attempts=0 -->
+      <!-- ai-orchestrator:processed-blocker-ids=B1,B2 -->
+    `,
+      {
+        commentAuthorLogin: "contributor",
+        trustedOrchestratorLogins: ["ai-orchestrator[bot]"]
+      }
+    );
+
+    assert.equal(state.trustedSource, false);
+    assert.equal(state.authority, "audit-only");
+    assert.equal(state.state, undefined);
+    assert.equal(state.fixAttempts, undefined);
+    assert.deepEqual(state.processedBlockerIds, []);
+  });
+
+  it("parses multiple attributes emitted in one orchestrator marker", () => {
+    const state = parseOrchestratorStateMarkers(
+      `
+      <!-- ai-orchestrator:epoch=1 fix-attempts=2 processed-blocker-ids=B1,B2 -->
+    `,
+      trustedOrchestratorSource
+    );
+
+    assert.equal(state.epoch, 1);
+    assert.equal(state.fixAttempts, 2);
+    assert.deepEqual(state.processedBlockerIds, ["B1", "B2"]);
   });
 });
 
@@ -129,3 +204,8 @@ function validConvergenceInput(overrides: Partial<ConvergenceStateInput> = {}): 
     ...overrides
   };
 }
+
+const trustedOrchestratorSource = {
+  commentAuthorLogin: "ai-orchestrator[bot]",
+  trustedOrchestratorLogins: ["ai-orchestrator[bot]"]
+} satisfies OrchestratorStateMarkerSource;

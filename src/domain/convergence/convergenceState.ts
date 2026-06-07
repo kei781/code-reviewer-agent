@@ -75,11 +75,15 @@ function getStallReasons(input: ConvergenceStateInput): ConvergenceReason[] {
     reasons.push("fixer-diff-introduced-blocker");
   }
 
-  if (input.unresolvedBlockerCount > 0 && input.unresolvedBlockerCount >= input.previousUnresolvedBlockerCount) {
+  if (
+    input.fixAttempts > 0 &&
+    input.unresolvedBlockerCount > 0 &&
+    input.unresolvedBlockerCount >= input.previousUnresolvedBlockerCount
+  ) {
     reasons.push("blocker-count-not-decreasing");
   }
 
-  if (input.repeatedBlockerClasses.length > 0) {
+  if (input.fixAttempts > 0 && input.repeatedBlockerClasses.length > 0) {
     reasons.push("repeated-blocker-class");
   }
 

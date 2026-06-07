@@ -37,7 +37,13 @@ export type {
 export { reviewSummaryMarker, orchestratorStateMarkerPrefix, renderReviewMarkers } from "./domain/review/reviewMarker.js";
 export type { ReviewConvergenceState, ReviewMarkerMetadata } from "./domain/review/reviewMarker.js";
 export { parseOrchestratorStateMarkers } from "./domain/review/orchestratorStateMarker.js";
-export type { OrchestratorRuntimeState, OrchestratorStateMarkers } from "./domain/review/orchestratorStateMarker.js";
+export type {
+  OrchestratorMarkerAuthority,
+  OrchestratorRuntimeState,
+  OrchestratorStateMarkerSource,
+  OrchestratorStateMarkers,
+  OrchestratorTerminalState
+} from "./domain/review/orchestratorStateMarker.js";
 export { decideConvergenceState } from "./domain/convergence/convergenceState.js";
 export type {
   ConvergenceDecision,

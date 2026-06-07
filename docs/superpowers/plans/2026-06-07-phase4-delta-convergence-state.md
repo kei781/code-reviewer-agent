@@ -65,13 +65,19 @@ Expected: convergence tests pass.
 
 ```typescript
 it("parses hidden orchestrator state markers", () => {
-  const state = parseOrchestratorStateMarkers(`
-    <!-- ai-orchestrator:state=VERIFYING -->
-    <!-- ai-orchestrator:epoch=2 -->
-    <!-- ai-orchestrator:last-reviewer-reviewed-sha=sha2 -->
-    <!-- ai-orchestrator:fix-attempts=1 -->
-    <!-- ai-orchestrator:processed-actionable-ids=A1,A2 -->
-  `);
+  const state = parseOrchestratorStateMarkers(
+    `
+      <!-- ai-orchestrator:state=VERIFYING -->
+      <!-- ai-orchestrator:epoch=2 -->
+      <!-- ai-orchestrator:last-reviewer-reviewed-sha=sha2 -->
+      <!-- ai-orchestrator:fix-attempts=1 -->
+      <!-- ai-orchestrator:processed-actionable-ids=A1,A2 -->
+    `,
+    {
+      commentAuthorLogin: "ai-orchestrator[bot]",
+      trustedOrchestratorLogins: ["ai-orchestrator[bot]"]
+    }
+  );
 
   assert.equal(state.state, "VERIFYING");
   assert.equal(state.epoch, 2);
@@ -87,7 +93,7 @@ Expected: fail because `parseOrchestratorStateMarkers` is not exported.
 
 - [x] **Step 3: Implement parser**
 
-Parse only known keys and normalize comma-separated ids. Invalid numeric values should be omitted rather than converted to `NaN`.
+Parse only known keys from trusted orchestrator comment authors and normalize comma-separated ids. Invalid numeric values should be omitted rather than converted to `NaN`. Parsed marker values are audit output only, not authoritative loop state.
 
 - [x] **Step 4: Run GREEN**
 
@@ -137,3 +143,10 @@ Expected: all checks pass; `rg` has no direct `console.log` matches.
 - Spec coverage: ADR D6, D7, D8, D11 and PRD P1 acceptance criteria for terminal states and hidden state markers are covered.
 - Scope check: No app use case, GitHub adapter, write-token apply job, or auto-merge behavior is included.
 - Type consistency: new exported names are `decideConvergenceState`, `parseOrchestratorStateMarkers`, `ConvergenceDecision`, and `OrchestratorStateMarkers`.
+
+## Review Follow-up
+
+- Added a first-round guard so initial reviews with blockers stay `CONVERGING` instead of being misclassified as stalled.
+- Kept fixer-diff-introduced blockers as immediate `STALLED_OSCILLATING` and added coverage documenting that ADR D7 interpretation.
+- Required trusted orchestrator comment provenance before parsing `ai-orchestrator` markers and marked parsed data as `audit-only`.
+- Added support for `terminal-state` and multiple `key=value` attributes in one marker.
