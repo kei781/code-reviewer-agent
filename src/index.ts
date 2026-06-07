@@ -20,7 +20,7 @@ export type {
   ConfigKey,
   ConfigLoadResult,
   InvalidConfigValue,
-  ModelConfig
+  ReviewerCliConfig
 } from "./shared/config.js";
 export { implementationPhases as reviewServerImplementationPhases } from "./domain/workflow/phases.js";
 

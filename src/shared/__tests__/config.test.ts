@@ -16,16 +16,10 @@ describe("shared runtime config", () => {
     GITHUB_WEBHOOK_SECRET: "replace-with-random-webhook-secret",
     GITHUB_OWNER: "kei781",
     GITHUB_REPO: "sql-agent",
-    CLAUDE_REVIEWER_PROVIDER: "anthropic",
-    CLAUDE_REVIEWER_MODEL: "replace-with-frontier-claude-reviewer-model",
-    CLAUDE_REVIEWER_MODEL_FAMILY: "claude",
-    CLAUDE_REVIEWER_ADAPTER: "claude-code",
-    CLAUDE_REVIEWER_API_KEY: "replace-with-claude-reviewer-api-key",
-    CODEX_REVIEWER_PROVIDER: "openai",
-    CODEX_REVIEWER_MODEL: "replace-with-frontier-codex-reviewer-model",
-    CODEX_REVIEWER_MODEL_FAMILY: "codex",
-    CODEX_REVIEWER_ADAPTER: "codex",
-    CODEX_REVIEWER_API_KEY: "replace-with-codex-reviewer-api-key",
+    CLAUDE_CODE_COMMAND: "claude",
+    CLAUDE_CODE_AUTH_MODE: "local-oauth",
+    CODEX_COMMAND: "codex",
+    CODEX_AUTH_MODE: "local-oauth",
     MODEL_EGRESS_ALLOWLIST: "api.anthropic.com,api.openai.com",
     HUMAN_REVIEW_LABEL: "needs-human-review",
     SECURITY_SENSITIVE_LABEL: "security-sensitive",
@@ -43,7 +37,9 @@ describe("shared runtime config", () => {
     }
 
     assert.deepEqual(
-      requiredConfigKeys.filter((key) => /FIXER|AUTOFIX|AUTOMERGE|MAX_FIX_ATTEMPTS|TRUSTED_FIXERS/u.test(key)),
+      requiredConfigKeys.filter((key) =>
+        /API_KEY|FIXER|AUTOFIX|AUTOMERGE|MAX_FIX_ATTEMPTS|TRUSTED_FIXERS/u.test(key)
+      ),
       []
     );
     assert.match(gitignore, /^\.env$/mu);
@@ -52,6 +48,8 @@ describe("shared runtime config", () => {
     assert.equal(isGitIgnored(".env"), true);
     assert.equal(isGitIgnored(".env.local"), true);
     assert.equal(isGitIgnored(".env.example"), false);
+    assert.doesNotMatch(example, /API_KEY/u);
+    assert.match(example, /Local OAuth-authenticated reviewer CLIs/u);
     assert.doesNotMatch(example, /ghp_[A-Za-z0-9_]+/u);
     assert.doesNotMatch(example, /sk-[A-Za-z0-9_]+/u);
   });
@@ -63,8 +61,9 @@ describe("shared runtime config", () => {
 
     if (!result.ok) {
       assert.ok(result.missingKeys.includes("GITHUB_WEBHOOK_SECRET"));
-      assert.ok(result.missingKeys.includes("CLAUDE_REVIEWER_MODEL"));
-      assert.ok(result.missingKeys.includes("CODEX_REVIEWER_MODEL"));
+      assert.ok(result.missingKeys.includes("CLAUDE_CODE_COMMAND"));
+      assert.ok(result.missingKeys.includes("CODEX_COMMAND"));
+      assert.equal(result.missingKeys.some((key) => key.includes("API_KEY")), false);
       assert.equal(result.missingKeys.some((key) => key.startsWith("FIXER_")), false);
       assert.deepEqual(result.invalidValues, []);
     }
@@ -89,8 +88,14 @@ describe("shared runtime config", () => {
         owner: "kei781",
         repo: "sql-agent"
       });
-      assert.equal(result.config.reviewers.claudeCode.model, "replace-with-frontier-claude-reviewer-model");
-      assert.equal(result.config.reviewers.codex.model, "replace-with-frontier-codex-reviewer-model");
+      assert.deepEqual(result.config.reviewers.claudeCode, {
+        command: "claude",
+        authMode: "local-oauth"
+      });
+      assert.deepEqual(result.config.reviewers.codex, {
+        command: "codex",
+        authMode: "local-oauth"
+      });
       assert.deepEqual(result.config.modelEgressAllowlist, ["api.anthropic.com", "api.openai.com"]);
       assert.deepEqual(result.config.policy.trustedReviewers, ["claude[bot]", "claude-code[bot]"]);
     }

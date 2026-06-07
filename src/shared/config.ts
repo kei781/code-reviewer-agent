@@ -8,16 +8,10 @@ export const requiredConfigKeys = [
   "GITHUB_WEBHOOK_SECRET",
   "GITHUB_OWNER",
   "GITHUB_REPO",
-  "CLAUDE_REVIEWER_PROVIDER",
-  "CLAUDE_REVIEWER_MODEL",
-  "CLAUDE_REVIEWER_MODEL_FAMILY",
-  "CLAUDE_REVIEWER_ADAPTER",
-  "CLAUDE_REVIEWER_API_KEY",
-  "CODEX_REVIEWER_PROVIDER",
-  "CODEX_REVIEWER_MODEL",
-  "CODEX_REVIEWER_MODEL_FAMILY",
-  "CODEX_REVIEWER_ADAPTER",
-  "CODEX_REVIEWER_API_KEY",
+  "CLAUDE_CODE_COMMAND",
+  "CLAUDE_CODE_AUTH_MODE",
+  "CODEX_COMMAND",
+  "CODEX_AUTH_MODE",
   "MODEL_EGRESS_ALLOWLIST",
   "HUMAN_REVIEW_LABEL",
   "SECURITY_SENSITIVE_LABEL",
@@ -32,12 +26,9 @@ export type ConfigEnvSource = {
   readonly [key: string]: string | undefined;
 };
 
-export interface ModelConfig {
-  readonly provider: string;
-  readonly model: string;
-  readonly modelFamily: string;
-  readonly adapter: string;
-  readonly apiKey: string;
+export interface ReviewerCliConfig {
+  readonly command: string;
+  readonly authMode: string;
 }
 
 export interface Config {
@@ -55,8 +46,8 @@ export interface Config {
     readonly repo: string;
   };
   readonly reviewers: {
-    readonly claudeCode: ModelConfig;
-    readonly codex: ModelConfig;
+    readonly claudeCode: ReviewerCliConfig;
+    readonly codex: ReviewerCliConfig;
   };
   readonly modelEgressAllowlist: readonly string[];
   readonly policy: {
@@ -132,18 +123,12 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
       },
       reviewers: {
         claudeCode: {
-          provider: requiredValue(env, "CLAUDE_REVIEWER_PROVIDER"),
-          model: requiredValue(env, "CLAUDE_REVIEWER_MODEL"),
-          modelFamily: requiredValue(env, "CLAUDE_REVIEWER_MODEL_FAMILY"),
-          adapter: requiredValue(env, "CLAUDE_REVIEWER_ADAPTER"),
-          apiKey: requiredValue(env, "CLAUDE_REVIEWER_API_KEY")
+          command: requiredValue(env, "CLAUDE_CODE_COMMAND"),
+          authMode: requiredValue(env, "CLAUDE_CODE_AUTH_MODE")
         },
         codex: {
-          provider: requiredValue(env, "CODEX_REVIEWER_PROVIDER"),
-          model: requiredValue(env, "CODEX_REVIEWER_MODEL"),
-          modelFamily: requiredValue(env, "CODEX_REVIEWER_MODEL_FAMILY"),
-          adapter: requiredValue(env, "CODEX_REVIEWER_ADAPTER"),
-          apiKey: requiredValue(env, "CODEX_REVIEWER_API_KEY")
+          command: requiredValue(env, "CODEX_COMMAND"),
+          authMode: requiredValue(env, "CODEX_AUTH_MODE")
         }
       },
       modelEgressAllowlist,
