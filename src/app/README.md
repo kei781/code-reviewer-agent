@@ -18,3 +18,6 @@ Rules:
 - Review state ports must claim a delivery/head SHA before side effects, expose posted finding fingerprints for dedup, and record structured failures.
 - Human-review routing, such as required risky paths or dropped blocker candidates, is represented in the publication summary for adapters to label/comment.
 - Follow-up response ports must not expose code mutation, approval, merge, branch-protection, or write-token capabilities. Even fix/merge requests remain analysis-only in P0.
+- Follow-up adapters must enrich raw `issue_comment` payloads with PR metadata before calling the app use case. In particular, `headSha` and `isFork` come from the PR, not from the raw comment event.
+- Follow-up state claims include a `commentRevisionKey` derived from the comment body so edited comments can be answered again on the same PR head.
+- The `ai-blocked` label is a hard skip for follow-up responses; other blocking labels remain read-only responder context.

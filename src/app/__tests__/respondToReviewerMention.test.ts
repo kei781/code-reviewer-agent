@@ -29,6 +29,7 @@ function baseCommentEvent(overrides: Partial<ReviewerMentionCommentEvent> = {}):
 function createPorts(
   options: {
     readonly claimResult?: FollowUpClaimResult;
+    readonly markRespondedError?: Error;
     readonly responseError?: Error;
     readonly publishResponseError?: Error;
   } = {}
@@ -54,6 +55,9 @@ function createPorts(
       async markFollowUpResponded(input) {
         calls.order.push("markFollowUpResponded");
         calls.markFollowUpResponded.push(input);
+        if (options.markRespondedError) {
+          throw options.markRespondedError;
+        }
       },
       async markFollowUpFailed(input) {
         calls.order.push("markFollowUpFailed");
@@ -152,7 +156,8 @@ describe("respondToReviewerMention", () => {
       repositoryFullName: "kei781/sql-agent",
       pullRequestNumber: 42,
       headSha: "abc123",
-      commentId: 9001
+      commentId: 9001,
+      commentRevisionKey: "sha256:46317942e73278be"
     });
 
     const request = calls.generateFollowUpResponse[0] as FollowUpResponseRequest;
@@ -170,6 +175,27 @@ describe("respondToReviewerMention", () => {
     >[0];
     assert.equal(publication.response.responseScope, "analysis-only");
     assert.equal(publication.request.commentId, 9001);
+    assert.equal(publication.request.commentRevisionKey, "sha256:46317942e73278be");
+  });
+
+  it("uses changed edited comment bodies as a distinct follow-up claim revision", async () => {
+    const { ports, calls } = createPorts();
+
+    await respondToReviewerMention(baseCommentEvent(), ports);
+    await respondToReviewerMention(
+      baseCommentEvent({
+        action: "edited",
+        deliveryId: "delivery-mention-2",
+        commentBody: "@ai-reviewer now focus on tests"
+      }),
+      ports
+    );
+
+    const firstClaim = calls.claimFollowUp[0] as Parameters<ReviewerMentionPorts["stateStore"]["claimFollowUp"]>[0];
+    const secondClaim = calls.claimFollowUp[1] as Parameters<ReviewerMentionPorts["stateStore"]["claimFollowUp"]>[0];
+    assert.equal(firstClaim.commentId, secondClaim.commentId);
+    assert.notEqual(firstClaim.commentRevisionKey, secondClaim.commentRevisionKey);
+    assert.equal(calls.generateFollowUpResponse.length, 2);
   });
 
   it("keeps fix requests read-only and carries blocking labels for response context", async () => {
@@ -193,6 +219,20 @@ describe("respondToReviewerMention", () => {
     ]);
     assert.deepEqual(request.blockedLabels, ["needs-human-review", "security-sensitive"]);
     assert.doesNotMatch(request.allowedResponseActions.join(","), /fix|merge|approve/u);
+  });
+
+  it("hard-skips ai-blocked labels before claiming follow-up work", async () => {
+    const { ports, calls } = createPorts();
+
+    const result = await respondToReviewerMention(baseCommentEvent({ labels: ["ai-blocked"] }), ports);
+
+    assert.deepEqual(result, { status: "skipped", reason: "blocked-label" });
+    assert.equal(calls.claimFollowUp.length, 0);
+    assert.equal(calls.generateFollowUpResponse.length, 0);
+    assert.equal(calls.publishFollowUpResponse.length, 0);
+
+    const skip = calls.publishSkip[0] as Parameters<ReviewerMentionPorts["publisher"]["publishSkip"]>[0];
+    assert.deepEqual(skip.blockedLabels, ["ai-blocked"]);
   });
 
   it("skips already processed comment/head pairs before generating a response", async () => {
@@ -233,5 +273,27 @@ describe("respondToReviewerMention", () => {
     const failure = calls.publishFailure[0] as Parameters<ReviewerMentionPorts["publisher"]["publishFailure"]>[0];
     assert.equal(failure.stage, "publish-follow-up-response");
     assert.equal(failure.message, "comment failed");
+  });
+
+  it("does not publish a user-facing failure after the response comment is already published", async () => {
+    const { ports, calls } = createPorts({ markRespondedError: new Error("state failed") });
+
+    const result = await respondToReviewerMention(baseCommentEvent(), ports);
+
+    assert.deepEqual(result, { status: "failed", stage: "mark-follow-up-responded" });
+    assert.deepEqual(calls.order, [
+      "claimFollowUp",
+      "generateFollowUpResponse",
+      "publishFollowUpResponse",
+      "markFollowUpResponded",
+      "markFollowUpFailed"
+    ]);
+    assert.equal(calls.publishFollowUpResponse.length, 1);
+    assert.equal(calls.publishFailure.length, 0);
+    assert.equal(calls.markFollowUpFailed.length, 1);
+
+    const failure = calls.markFollowUpFailed[0] as Parameters<ReviewerMentionPorts["stateStore"]["markFollowUpFailed"]>[0];
+    assert.equal(failure.stage, "mark-follow-up-responded");
+    assert.equal(failure.message, "state failed");
   });
 });

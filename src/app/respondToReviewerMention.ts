@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { detectReviewerTrigger, reviewerTriggerAliases } from "../domain/policy/reviewerTriggerPolicy.js";
 import type { MergeSignal } from "../domain/review/reviewSignal.js";
 
@@ -8,12 +9,20 @@ export interface ReviewerMentionCommentEvent {
   readonly action: string;
   readonly repositoryFullName: string;
   readonly pullRequestNumber: number;
+  /**
+   * Latest PR head SHA, loaded by the concrete issue_comment adapter from PR metadata.
+   * GitHub issue_comment payloads do not include this value directly.
+   */
   readonly headSha: string;
   readonly commentId: number;
   readonly commentBody: string;
   readonly commentAuthorLogin: string;
   readonly isPullRequest: boolean;
   readonly isClosed: boolean;
+  /**
+   * PR head repository fork status, loaded by the concrete issue_comment adapter from PR metadata.
+   * GitHub issue_comment payloads do not include this value directly.
+   */
   readonly isFork: boolean;
   readonly labels: readonly string[];
 }
@@ -39,6 +48,7 @@ export interface FollowUpStateKey {
   readonly pullRequestNumber: number;
   readonly headSha: string;
   readonly commentId: number;
+  readonly commentRevisionKey: string;
 }
 
 export interface FollowUpStateRecord extends FollowUpStateKey {
@@ -90,6 +100,7 @@ export interface FollowUpRespondedRecord extends FollowUpStateRecord {
 
 export interface FollowUpSkipPublication extends FollowUpStateRecord {
   readonly reason: FollowUpSkipReason;
+  readonly blockedLabels: readonly FollowUpBlockingLabel[];
 }
 
 export interface FollowUpFailurePublication extends FollowUpFailureRecord {
@@ -128,6 +139,7 @@ export type FollowUpSkipReason =
   | "not-pull-request"
   | "closed"
   | "fork"
+  | "blocked-label"
   | "already-processed-delivery"
   | "already-processed-comment";
 
@@ -172,6 +184,11 @@ export async function respondToReviewerMention(
     return publishSkip(event, ports, "fork");
   }
 
+  const blockedLabels = filterBlockingLabels(event.labels);
+  if (blockedLabels.includes("ai-blocked")) {
+    return publishSkip(event, ports, "blocked-label", blockedLabels);
+  }
+
   const stateRecord = toStateRecord(event);
   let stage: FollowUpFailureStage = "claim-follow-up";
   let claimSucceeded = false;
@@ -201,7 +218,10 @@ export async function respondToReviewerMention(
       message: errorMessage(error)
     };
 
-    await ports.publisher.publishFailure(failure);
+    if (stage !== "mark-follow-up-responded") {
+      await ports.publisher.publishFailure(failure);
+    }
+
     if (claimSucceeded) {
       await ports.stateStore.markFollowUpFailed(failure);
     }
@@ -234,11 +254,13 @@ function isNonEmpty(value: string): boolean {
 async function publishSkip(
   event: ReviewerMentionCommentEvent,
   ports: ReviewerMentionPorts,
-  reason: FollowUpSkipReason
+  reason: FollowUpSkipReason,
+  blockedLabels: readonly FollowUpBlockingLabel[] = []
 ): Promise<FollowUpRunResult> {
   await ports.publisher.publishSkip({
     ...toStateRecord(event),
-    reason
+    reason,
+    blockedLabels
   });
 
   return { status: "skipped", reason };
@@ -250,8 +272,15 @@ function toStateRecord(event: ReviewerMentionCommentEvent): FollowUpStateRecord 
     repositoryFullName: event.repositoryFullName,
     pullRequestNumber: event.pullRequestNumber,
     headSha: event.headSha,
-    commentId: event.commentId
+    commentId: event.commentId,
+    commentRevisionKey: buildCommentRevisionKey(event.commentBody)
   };
+}
+
+function buildCommentRevisionKey(commentBody: string): string {
+  const bodyHash = createHash("sha256").update(commentBody).digest("hex").slice(0, 16);
+
+  return `sha256:${bodyHash}`;
 }
 
 function buildResponseRequest(
@@ -263,6 +292,7 @@ function buildResponseRequest(
     pullRequestNumber: event.pullRequestNumber,
     headSha: event.headSha,
     commentId: event.commentId,
+    commentRevisionKey: buildCommentRevisionKey(event.commentBody),
     commentBody: event.commentBody,
     commentAuthorLogin: event.commentAuthorLogin,
     matchedAlias,
