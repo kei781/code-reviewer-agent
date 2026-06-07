@@ -235,7 +235,7 @@ pr_review_state  PK(repo, pr_number)
 - **app (fake 포트)**: `RunEnsembleReview`를 fake GitWorkspace/SandboxRunner/GitHub로 — guard 통과/실패, dedup, 게시 호출, skip 경로를 결정론 검증. (SandboxRunner는 캔드 findings JSON 반환 fake)
 - **adapters (얇은 통합)**: HMAC, SQLite, GitCli(임시 repo), ContainerSandbox(스텁 명령), GitHubAppAdapter(녹화 fixture).
 - **에이전트 리뷰 품질**: 단위 테스트 대상 아님(프롬프트/모델 의존) → 소수의 **골든 PR 픽스처로 eval/통합**(합의·오탐 비율 관찰). 결정론 보장은 서버 경계까지.
-- 테스트 러너: `node --test "dist/**/*.test.js"`(no-op 회피).
+- 테스트 러너: `node --test "dist/**/*.test.js"`(디렉터리 인자 no-op 회피). 추가로 CI에서 **discovered test count > 0**을 단언해 silent-pass(빌드 누락·glob 미스)를 차단.
 
 ---
 
