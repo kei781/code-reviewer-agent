@@ -50,6 +50,14 @@ describe("implementation phase plan", () => {
     assert.doesNotMatch(activePhaseText, /fixer|autofix|auto-merge|automerge|convergence/iu);
     assert.doesNotMatch(indexSource, /Autofix|ActionableMarker|ModelPair|Convergence|MergeGate|Autonomous|Operational/u);
   });
+
+  it("keeps the MVP judgment-stage bias exception traceable in operating notes", () => {
+    const agentInstructions = readFileSync("AGENTS.md", "utf8");
+
+    assert.match(agentInstructions, /generation-stage independence/u);
+    assert.match(agentInstructions, /judgment-stage residual bias/u);
+    assert.match(agentInstructions, /ServerReconcileOrchestrator/u);
+  });
 });
 
 describe("review server run plan", () => {

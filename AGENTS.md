@@ -26,6 +26,12 @@ The current runtime is:
 
 Codex is the second reviewer in this architecture, not an implementer role. Review comments are signals, not formal approvals or merge authorization.
 
+MVP judgment-stage residual bias exception:
+
+- Reviewer candidate generation keeps generation-stage independence: Claude Code and Codex are spawned as separate fresh-context passes and must not read each other's output before candidate findings are complete.
+- The MVP judgment stage is intentionally not fully neutral because Claude Code also performs cross-validation and reconciliation after candidate generation.
+- Track this as a temporary adapter limitation, not a permanent architecture rule. Replace the `OrchestratorPort` adapter with a neutral `ServerReconcileOrchestrator` when judgment neutrality is required; remove this exception note when that replacement lands.
+
 Security invariants:
 
 - Do not execute or trust PR-controlled agent configuration such as `.claude/`, `CLAUDE.md`, or git hooks.
