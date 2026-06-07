@@ -1,108 +1,61 @@
 # Implementation Phase Plan
 
-This plan is derived from the latest root `ADR.md` and `PRD.md`. Each phase must be implemented in its own pull request. The next phase may start only after all review comments on the previous phase PR are resolved.
+This plan follows the latest root `ADR.md` and `PRD.md` v5 correction. The active product is a self-hosted review server that runs independent Claude Code and Codex reviewer passes, cross-validates their findings against the local checkout, and posts only valid review comments.
 
-> **v5 개정 (2026-06-04)**: 오케스트레이터가 **자체 호스팅 서버 + 앵상블 리뷰**로 전환됨 (ADR/PRD §0, 상세: `docs/superpowers/specs/2026-06-04-frontier-pair-self-hosted-orchestrator-design.md`). 아래 **Phase 1~6**(GitHub Actions 기반 R리뷰/F자동수정/수렴)은 **superseded — 역사적 맥락으로 보존**한다. 새 구현은 아래 **v5 단계**를 따른다.
+Each phase should be implemented in its own pull request. The next phase starts only after review comments on the current PR are resolved.
 
-## v5 단계 (자체 호스팅 앵상블 리뷰)
+## Phase 0: Governance and Structure
 
-### v5-P0 — Governance (선행, 코딩 전)
-ADR.md/PRD.md §0 개정(완료), `directory-structure.md`·`phase-plan.md` 갱신. 코드 작성은 이 PR 머지 후 시작.
+Goal: establish a human-readable TypeScript project layout and durable agent guardrails.
 
-### v5-P0a — 단일 모델 리뷰 (서버 골격)
-webhook(HMAC)+SQLite 큐+워커 · GitHubAppAdapter(설치토큰·diff/labels·인라인 게시) · GitCli(clone/fetch/head-SHA checkout, 읽기전용 작업공간) · ContainerSandbox(격리·egress allowlist·GitHub토큰 미주입) · ClaudeCodeAgent(단독 리뷰→findings JSON) · ReviewFinding 스키마/파서 · Policy guard(same-repo/draft/fork/risky/한도) · Dedup(SHA·fingerprint) · RunEnsembleReview(단일) · 실패/스킵 코멘트+구조화 로그.
+Deliverables:
 
-### v5-P0b — Codex 추가 + 교차검증 (앵상블 완성)
-Codex 플러그인(fresh context) · A/B 독립 리뷰 프로토콜 · **코드베이스 기반** 교차검증 · 유효 finding만 게시.
+- Strict TypeScript package baseline.
+- `src` split into domain, app, adapters, agents, orchestration, shared, and project areas.
+- Central `log()` helper.
+- Setup automation with POSIX bootstrap and local Node preparation.
+- Directory ownership documentation and tests.
 
-### v5-P0c — 명시적 reviewer follow-up
-`issue_comment` created/edited 이벤트에서 configured trigger(`@ai-reviewer`, `@claude`, `/ai review`)를 감지하고, open same-repo PR에 대해서만 read-only 후속 응답을 생성한다. P0 범위에서는 fix/merge 요청도 코드 변경 없이 분석·설명·risk clarification·재검토 신호로만 응답한다.
-
-### v5-future
-사람 트리거 옵트인 자동수정(구 Fixer/apply/수렴), P2 verdict check·auto-merge.
-
----
-
-## (superseded, v4) Phase 0 — Repository structure and agent guardrails
-
-**Goal:** Establish a human-readable TypeScript project layout and write durable rules so future agents do not collapse role boundaries or mix adapter concerns into reusable modules.
-
-**Deliverables:**
-
-- TypeScript package baseline with strict compiler settings.
-- `src` directory split into domain, app, adapter, shared, and project areas.
-- Architecture documentation for directory boundaries and dependency direction.
-- Root `AGENTS.md` rules that bind future agents to the ADR/PRD phase model.
-- Phase metadata module and tests proving the plan is explicit and ordered.
-
-**Exit criteria:**
+Exit criteria:
 
 - `npm run check` succeeds.
-- Phase plan documents that implementation stops after this PR until comments are resolved.
+- Directory and phase metadata are explicit.
+- P0 boundaries are documented.
 
-## Phase 1 — P0 Reviewer Signal MVP
+## Phase 1: Review-server Cross-validation
 
-**Goal:** Implement the structured reviewer signal path for same-repo PRs without formal approval, autofix, or merge automation.
+Goal: process PR webhook events through injected ports and publish only codebase-backed review findings.
 
-**Deliverables:**
+Deliverables:
 
-- PR event policy and same-repo guard.
-- Structured review comment schema with `MERGE_SIGNAL` and hidden markers.
-- Reviewer prompt contract emphasizing SQL safety, catalog allowlist, LIMIT handling, LLM-to-query paths, and test gaps.
-- Adapter ports and one concrete reviewer adapter wiring path.
-- Tests for policy decisions and comment rendering.
+- Webhook event contract.
+- Local workspace preparation contract pinned to the webhook head SHA.
+- Independent Claude Code and Codex reviewer orchestration port.
+- Cross-validation of candidate findings.
+- Review publication summary with reviewed SHA, agent identities, finding counts, and `MERGE_SIGNAL`.
 
-## Phase 2 — P0 follow-up reviewer interactions
+Exit criteria:
 
-**Goal:** Support explicit reviewer mention/command follow-up without turning comments into implicit approvals.
+- Supported PR events are processed.
+- Draft, closed, fork, unsupported, duplicate delivery, and already-reviewed SHA cases skip before side effects where possible.
+- Review comments remain review signals, not formal approvals.
 
-**Deliverables:**
+## Phase 2: Human Handoff Follow-up
 
-- Mention/command parser.
-- Follow-up response schema.
-- SHA-aware dedupe and stale review handling.
-- Tests for trigger parsing and safe no-op behavior.
+Goal: answer explicit reviewer mentions or commands without taking ownership of code changes.
 
-## Phase 3 — P1 Frontier Pair Autofix Pilot
+Deliverables:
 
-**Goal:** Add opt-in `ai-autofix` handling where Fixer F proposes bounded patches and a separate apply job owns write permissions.
+- Mention trigger parser for configured aliases.
+- Follow-up response use case with state-claim dedupe.
+- Response contract limited to analysis, explanation, risk clarification, or re-review signal.
 
-**Deliverables:**
+Exit criteria:
 
-- Actionable blocker marker schema.
-- Fixer analyze contract that emits patch artifacts and summaries.
-- Apply-job policy gates for labels, attempts, SHA, risky paths, same-repo source, and R/F independence.
-- Commit metadata and PR comment audit trail.
+- Ordinary comments do not trigger the reviewer.
+- Fork, closed, non-PR, blocked-label, duplicate, and stale comment cases skip safely.
+- Requests to change code or merge remain read-only responses.
 
-## Phase 4 — P1 Delta verification and convergence state
+## Completion Boundary
 
-**Goal:** Re-run Reviewer R against fixer deltas and mark blocker-fixpoint convergence only when unresolved blockers are zero on the latest SHA.
-
-**Deliverables:**
-
-- State machine for reviewing, fixing, verifying, converged, stalled, and capped states.
-- Hidden marker parser/updater for epoch, attempts, processed blockers, and histories.
-- Round caps and oscillation handling.
-- Tests for state transitions and convergence criteria.
-
-## Phase 5 — P2-H Conservative Merge Gate
-
-**Goal:** Add CI/branch-protection-compatible verdict checks while keeping human final review.
-
-**Deliverables:**
-
-- `ai-review/verdict` check abstraction.
-- Required-check compatible status outcomes.
-- `ai-automerge` policy that only enables GitHub native auto-merge after all gates and human requirements are satisfied.
-- No direct merge implementation.
-
-## Phase 6 — P2-A approval and P3 advanced operations
-
-**Goal:** Add approval-gated low-risk autonomous readiness and operational follow-up contracts without enabling autonomous side effects before a separate policy amendment.
-
-**Deliverables:**
-
-- Explicit ADR amendment, human-review relaxation, rollback procedure, low-risk path, and trusted-author readiness checks.
-- Latest verdict, required CI, branch protection, fork, risky-path, merge-conflict, attempt-cap, and model-pair guard checks.
-- Alert reason, channel recommendation, and recovery runbook data for stalled, capped, blocked, over-budget, failed, or rollback-needed automation.
-- No GraphQL, Slack, GitHub Discussion, rollback PR, approval, merge, or branch-protection bypass side effects.
+The implemented phase set ends at Phase 2. After review comments are posted, a human maintainer decides whether to resolve them, request additional development, or start a separate human-directed implementation task.

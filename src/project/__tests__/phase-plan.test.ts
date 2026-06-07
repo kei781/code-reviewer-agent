@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   buildReviewServerRunPlan,
@@ -15,7 +16,7 @@ describe("implementation phase plan", () => {
   it("keeps phase identifiers unique and ordered", () => {
     const ids = implementationPhases.map((phase) => phase.id);
 
-    assert.deepEqual(ids, ["phase-0", "phase-1", "phase-2", "phase-3", "phase-4", "phase-5", "phase-6"]);
+    assert.deepEqual(ids, ["phase-0", "phase-1", "phase-2"]);
     assert.equal(new Set(ids).size, ids.length);
   });
 
@@ -25,11 +26,7 @@ describe("implementation phase plan", () => {
       [
         ["phase-0", "implemented"],
         ["phase-1", "implemented"],
-        ["phase-2", "implemented"],
-        ["phase-3", "implemented"],
-        ["phase-4", "implemented"],
-        ["phase-5", "implemented"],
-        ["phase-6", "implemented"]
+        ["phase-2", "implemented"]
       ]
     );
   });
@@ -40,6 +37,18 @@ describe("implementation phase plan", () => {
 
     assert.deepEqual(activePhases, []);
     assert.equal(firstBlockedPhase, undefined);
+  });
+
+  it("keeps the active implementation scope review-only with human handoff", () => {
+    const activePhaseText = JSON.stringify(implementationPhases);
+    const staleRuntimeFiles = listSourceFiles("src").filter((path) =>
+      /[\\/]fixer[\\/]|autofixPolicy|modelPairPolicy|[\\/]convergence[\\/]|[\\/]merge[\\/]|[\\/]operations[\\/]/u.test(path)
+    );
+    const indexSource = readFileSync("src/index.ts", "utf8");
+
+    assert.deepEqual(staleRuntimeFiles, []);
+    assert.doesNotMatch(activePhaseText, /fixer|autofix|auto-merge|automerge|convergence/iu);
+    assert.doesNotMatch(indexSource, /Autofix|ActionableMarker|ModelPair|Convergence|MergeGate|Autonomous|Operational/u);
   });
 });
 
@@ -75,6 +84,19 @@ describe("review server run plan", () => {
     assert.match(plan.orchestratorHarness, /cross-validate/);
   });
 });
+
+function listSourceFiles(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+    const stats = statSync(path);
+
+    if (stats.isDirectory()) {
+      return listSourceFiles(path);
+    }
+
+    return path.endsWith(".ts") ? [path] : [];
+  });
+}
 
 describe("logger", () => {
   it("routes logs through a replaceable sink", () => {
@@ -150,7 +172,7 @@ describe("directory rules", () => {
     assert.ok(domainRule);
     assert.ok(domainRule.mustNotContain.includes("GitHub SDK calls"));
     assert.ok(adapterRule);
-    assert.ok(adapterRule.mustNotContain.includes("R/F role conflation"));
+    assert.ok(adapterRule.mustNotContain.includes("hidden reviewer context sharing"));
   });
 
   it("keeps app use cases independent from orchestration module types", () => {

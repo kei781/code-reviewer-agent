@@ -1,4 +1,4 @@
-export type PhaseId = 'P0' | 'P1' | 'P2-H' | 'P2-A' | 'P3';
+export type PhaseId = 'P0';
 
 export type PhaseStatus = 'planned' | 'in-progress' | 'blocked' | 'complete';
 

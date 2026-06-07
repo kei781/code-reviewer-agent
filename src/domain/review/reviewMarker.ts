@@ -1,20 +1,14 @@
 import type { MergeSignal } from './reviewSignal.js';
 
-export type ReviewConvergenceState =
-  | 'CONVERGING'
-  | 'CONVERGED_CLEAN'
-  | 'STALLED_OSCILLATING'
-  | 'CAPPED_WITH_OPEN'
-  | 'HUMAN_REVIEW_REQUIRED';
+export type ReviewPublicationState = 'REVIEWED' | 'HUMAN_REVIEW_REQUIRED';
 
 export interface ReviewMarkerMetadata {
   readonly reviewerModel: string;
   readonly reviewedSha: string;
   readonly epoch: number;
   readonly round: number;
-  readonly convergence: ReviewConvergenceState;
+  readonly reviewState: ReviewPublicationState;
   readonly mergeSignal: MergeSignal;
-  readonly passOrigin: 'FIRST_PASS' | 'LOOP_FIXPOINT' | 'NONE';
 }
 
 export const reviewSummaryMarker = '<!-- ai-review:summary -->';
@@ -27,10 +21,9 @@ export function renderReviewMarkers(metadata: ReviewMarkerMetadata): readonly st
     `<!-- ai-review:reviewer-model=${metadata.reviewerModel} -->`,
     `<!-- ai-review:reviewed-sha=${metadata.reviewedSha} -->`,
     `<!-- ai-review:epoch=${metadata.epoch} round=${metadata.round} -->`,
-    `<!-- ai-review:convergence=${metadata.convergence} -->`,
-    `<!-- ai-review:pass-origin=${metadata.passOrigin} -->`,
+    `<!-- ai-review:review-state=${metadata.reviewState} -->`,
     `<!-- ai-review:MERGE_SIGNAL=${metadata.mergeSignal} -->`,
-    `<!-- ai-orchestrator:state=${metadata.convergence} -->`,
+    `<!-- ai-orchestrator:state=${metadata.reviewState} -->`,
     `<!-- ai-orchestrator:epoch=${metadata.epoch} -->`,
     `<!-- ai-orchestrator:last-reviewer-reviewed-sha=${metadata.reviewedSha} -->`
   ];

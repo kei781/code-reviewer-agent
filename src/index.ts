@@ -29,80 +29,8 @@ export { decideP0ReviewerEligibility } from "./domain/policy/pullRequestPolicy.j
 export type { PolicyDecision, PullRequestPolicyInput } from "./domain/policy/pullRequestPolicy.js";
 export { evaluateRiskyPaths, riskyPathPatterns } from "./domain/policy/riskyPathPolicy.js";
 export type { RiskyPathDecision, RiskyPathMatch, RiskyPathSeverity } from "./domain/policy/riskyPathPolicy.js";
-export { extractActionableMarkers } from "./domain/fixer/actionableMarker.js";
-export type { ActionableMarker, ActionableMarkerSource, ActionableSeverity } from "./domain/fixer/actionableMarker.js";
-export { decideModelPairIndependence } from "./domain/policy/modelPairPolicy.js";
-export type {
-  ModelIdentity,
-  ModelPairBlockReason,
-  ModelPairPolicyDecision,
-  ModelPairPolicyInput,
-  ModelPairWarning
-} from "./domain/policy/modelPairPolicy.js";
-export { decideAutofixEligibility } from "./domain/policy/autofixPolicy.js";
-export type {
-  AutofixBlockReason,
-  AutofixNextAction,
-  AutofixPolicyDecision,
-  AutofixPolicyInput,
-  AutofixRecommendedLabel
-} from "./domain/policy/autofixPolicy.js";
 export { reviewSummaryMarker, orchestratorStateMarkerPrefix, renderReviewMarkers } from "./domain/review/reviewMarker.js";
-export type { ReviewConvergenceState, ReviewMarkerMetadata } from "./domain/review/reviewMarker.js";
-export { parseOrchestratorStateMarkers } from "./domain/review/orchestratorStateMarker.js";
-export type {
-  OrchestratorMarkerAuthority,
-  OrchestratorRuntimeState,
-  OrchestratorStateMarkerSource,
-  OrchestratorStateMarkers,
-  OrchestratorTerminalState
-} from "./domain/review/orchestratorStateMarker.js";
-export { decideConvergenceState } from "./domain/convergence/convergenceState.js";
-export type {
-  ConvergenceDecision,
-  ConvergencePassOrigin,
-  ConvergenceReason,
-  ConvergenceRecommendedLabel,
-  ConvergenceState,
-  ConvergenceStateInput,
-  ConvergenceTerminalState
-} from "./domain/convergence/convergenceState.js";
-export { decideVerdictCheck } from "./domain/merge/verdictCheck.js";
-export type {
-  VerdictCheckConclusion,
-  VerdictCheckInput,
-  VerdictCheckName,
-  VerdictCheckPublication,
-  VerdictCheckReason
-} from "./domain/merge/verdictCheck.js";
-export { decideConservativeMergeGate } from "./domain/merge/mergeGatePolicy.js";
-export type {
-  ConservativeMergeGateBlockReason,
-  ConservativeMergeGateDecision,
-  ConservativeMergeGateInput,
-  ConservativeMergeGateNextAction,
-  ConservativeMergeGateRecommendedLabel,
-  ConservativeMergeMethod,
-  RequiredCheckConclusion,
-  RequiredCheckStatus
-} from "./domain/merge/mergeGatePolicy.js";
-export { decideAutonomousReadiness } from "./domain/operations/autonomousReadiness.js";
-export type {
-  AutonomousPolicyApproval,
-  AutonomousReadinessBlockReason,
-  AutonomousReadinessDecision,
-  AutonomousReadinessInput,
-  AutonomousReadinessNextAction,
-  AutonomousReadinessRecommendedLabel
-} from "./domain/operations/autonomousReadiness.js";
-export { planOperationalFollowUp } from "./domain/operations/operationalFollowUp.js";
-export type {
-  OperationalAlertReason,
-  OperationalFollowUpInput,
-  OperationalFollowUpPlan,
-  OperationalRecommendedChannel,
-  OperationalRunbookId
-} from "./domain/operations/operationalFollowUp.js";
+export type { ReviewMarkerMetadata, ReviewPublicationState } from "./domain/review/reviewMarker.js";
 export { detectReviewerTrigger, reviewerTriggerAliases } from "./domain/policy/reviewerTriggerPolicy.js";
 export type { ReviewerTriggerDecision } from "./domain/policy/reviewerTriggerPolicy.js";
 export { validateFindingForPublication } from "./domain/review/crossValidation.js";
@@ -139,7 +67,6 @@ export type {
   ReviewFailureRecord,
   ReviewFailureStage,
   ReviewOrchestratorPort,
-  ReviewPassOrigin,
   ReviewPublication,
   ReviewPublicationSummary,
   ReviewPublishedRecord,
