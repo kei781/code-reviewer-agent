@@ -6,6 +6,7 @@
   "description": "TypeScript scaffold for the Frontier Pair AI PR review pipeline.",
   "scripts": {
     "setup": "node scripts/setup.mjs",
+    "setup:sh": "sh scripts/setup.sh",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "node --test \"dist/**/*.test.js\"",

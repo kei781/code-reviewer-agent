@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildReviewServerRunPlan,
@@ -85,6 +85,26 @@ describe("logger", () => {
         metadata: { command: "setup" }
       }
     ]);
+  });
+});
+
+describe("setup bootstrap", () => {
+  it("provides a POSIX shell bootstrap that installs Node locally before running setup", () => {
+    const script = readFileSync("scripts/setup.sh", "utf8");
+    const gitignore = readFileSync(".gitignore", "utf8");
+    const gitAttributes = readFileSync(".gitattributes", "utf8");
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts?: Record<string, string>;
+    };
+
+    assert.match(script, /^#!\/bin\/sh/u);
+    assert.match(script, /nodejs\.org\/dist\/v\$NODE_VERSION/u);
+    assert.match(script, /\.tools\/node/u);
+    assert.match(script, /scripts\/setup\.mjs/u);
+    assert.doesNotMatch(script, /\bsudo\b/u);
+    assert.match(gitignore, /^\.tools\/$/mu);
+    assert.match(gitAttributes, /^scripts\/\*\.sh text eol=lf$/mu);
+    assert.equal(packageJson.scripts?.["setup:sh"], "sh scripts/setup.sh");
   });
 });
 
