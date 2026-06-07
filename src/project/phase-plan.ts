@@ -84,7 +84,7 @@ export const implementationPhases = [
     description:
       "Model low-risk autonomous readiness and operational follow-up without enabling side effects before explicit policy approval.",
     sourceRequirement: "ADR/PRD P2-A/P3 future scope",
-    status: "implementing",
+    status: "implemented",
     deliverables: ["P2-A approval gate", "Low-risk path policy", "Operational alert plan", "Recovery runbook selection"],
   },
 ] as const satisfies readonly PhaseDefinition[];
