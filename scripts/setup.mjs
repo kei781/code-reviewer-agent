@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 function log(message, metadata = undefined) {
@@ -48,6 +48,16 @@ function ensureFile(path, content) {
   log("Created file", { path });
 }
 
+function cleanDirectory(path) {
+  if (!existsSync(path)) {
+    log("Skipped missing directory", { path });
+    return;
+  }
+
+  rmSync(path, { recursive: true, force: true });
+  log("Cleaned directory", { path });
+}
+
 function readPackageJson() {
   return JSON.parse(readFileSync("package.json", "utf8"));
 }
@@ -78,7 +88,6 @@ const requiredDirectories = [
   "src/adapters",
   "src/agents",
   "src/app",
-  "src/config",
   "src/domain",
   "src/orchestration",
   "src/project",
@@ -102,6 +111,7 @@ ensureFile(
 ensureFile(".env", readFileSync(".env.example", "utf8"));
 
 runNpm(["install"]);
+cleanDirectory("dist");
 run(process.execPath, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
 run(process.execPath, ["--test", "dist/**/*.test.js"]);
 

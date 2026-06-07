@@ -7,8 +7,9 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "setup:sh": "sh scripts/setup.sh",
+    "clean": "node scripts/clean-dist.mjs",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
-    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
+    "build": "npm run clean && node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "node --test \"dist/**/*.test.js\"",
     "check": "npm run typecheck && npm run build && npm run test"
   },
