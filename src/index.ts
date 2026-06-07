@@ -9,12 +9,11 @@ export {
 
 export type { PhaseDefinition, PhaseId, PhaseStatus } from "./shared/phase.js";
 export { log, resetLogSink, setLogSink, type LogEntry, type LogLevel, type LogOptions, type LogSink } from "./shared/log.js";
-export { implementationPhases as reviewServerImplementationPhases } from "./domain/workflow/phases.js";
 export {
   loadConfig,
   loadConfigFromEnv,
   requiredConfigKeys
-} from "./config/config.js";
+} from "./shared/config.js";
 export type {
   Config,
   ConfigEnvSource,
@@ -22,7 +21,8 @@ export type {
   ConfigLoadResult,
   InvalidConfigValue,
   ModelConfig
-} from "./config/config.js";
+} from "./shared/config.js";
+export { implementationPhases as reviewServerImplementationPhases } from "./domain/workflow/phases.js";
 
 export type { MergeSignal, ReviewSignal } from "./domain/review/reviewSignal.js";
 export { decideP0ReviewerEligibility } from "./domain/policy/pullRequestPolicy.js";

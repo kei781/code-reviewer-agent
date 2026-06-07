@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { loadConfigFromEnv, requiredConfigKeys } from "../../index.js";
 
-describe("review server runtime env config", () => {
+describe("shared runtime config", () => {
   const completeEnv = {
     REVIEW_SERVER_HOST: "127.0.0.1",
     REVIEW_SERVER_PORT: "3000",
@@ -98,8 +98,8 @@ describe("review server runtime env config", () => {
       .filter((path) => readFileSync(path, "utf8").includes("process.env"));
     const indexSource = readFileSync("src/index.ts", "utf8");
 
-    assert.deepEqual(envReaders, [join("src", "config", "config.ts")]);
-    assert.match(indexSource, /from "\.\/config\/config\.js"/u);
+    assert.deepEqual(envReaders, [join("src", "shared", "config.ts")]);
+    assert.match(indexSource, /from "\.\/shared\/config\.js"/u);
   });
 });
 
