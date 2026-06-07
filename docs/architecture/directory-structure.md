@@ -36,7 +36,7 @@ The P0 scaffold therefore models this flow as data:
 5. The orchestrator cross-validates candidate findings against the local checkout and PR diff.
 6. Only codebase-backed findings are posted as review comments.
 
-Concrete webhook, GitHub, git, sandbox, and model calls belong behind future ports/adapters. Phase 0 intentionally keeps them out of reusable domain rules.
+Concrete webhook, GitHub, git, sandbox, state, and model calls belong behind ports/adapters. Phase 1 starts this by adding an app-level `RunEnsembleReview` use case that accepts typed webhook event data, atomically claims review work through an injected state port, deduplicates posted finding fingerprints, and coordinates injected ports without calling concrete integrations directly.
 
 ## Dependency Rules
 
@@ -53,7 +53,7 @@ src/adapters      -> concrete SDK, filesystem, network, shell, model, and GitHub
 Forbidden directions:
 
 - `src/domain` must not import `src/app` or `src/adapters`.
-- `src/app` must not hard-code a model provider, GitHub SDK, or shell command implementation.
+- `src/app` must not hard-code a model provider, GitHub SDK, shell command implementation, or persistence implementation.
 - `src/shared` must not contain project-specific PR review policy.
 - `src/agents` harnesses must not hold secrets, GitHub tokens, or hidden shared reviewer context.
 - `src/orchestration` run-plan code must not execute shell commands directly.

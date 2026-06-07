@@ -1,16 +1,7 @@
 import { buildClaudeReviewerHarness } from '../agents/claudeReviewerHarness.js';
 import { buildCodexReviewerHarness } from '../agents/codexReviewerHarness.js';
 import { buildOrchestratorHarness } from '../agents/orchestratorHarness.js';
-
-export interface PullRequestReviewContext {
-  readonly repositoryUrl: string;
-  readonly repositoryFullName: string;
-  readonly pullRequestNumber: number;
-  readonly baseBranch: string;
-  readonly headBranch: string;
-  readonly headSha: string;
-  readonly localWorkspacePath: string;
-}
+import type { PullRequestReviewContext } from '../domain/review/pullRequestReviewContext.js';
 
 export type ReviewServerSetupRequirement =
   | 'codex-cli-installed'

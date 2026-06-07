@@ -1,4 +1,4 @@
-export type MergeSignal = 'PASS' | 'BLOCKED' | 'NEEDS_HUMAN_REVIEW';
+export type MergeSignal = 'PASS' | 'BLOCKED' | 'HUMAN_REVIEW_REQUIRED';
 
 export interface ReviewSignal {
   readonly reviewedSha: string;

@@ -7,6 +7,7 @@ export interface CodebaseEvidence {
 
 export interface CandidateReviewFinding {
   readonly id: string;
+  readonly fingerprint: string;
   readonly reviewerAgentId: 'reviewer-claude-code' | 'reviewer-codex';
   readonly title: string;
   readonly description: string;
