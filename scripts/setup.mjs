@@ -99,6 +99,8 @@ ensureFile(
   ].join("\n")
 );
 
+ensureFile(".env", readFileSync(".env.example", "utf8"));
+
 runNpm(["install"]);
 run(process.execPath, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
 run(process.execPath, ["--test", "dist/**/*.test.js"]);
