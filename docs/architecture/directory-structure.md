@@ -30,7 +30,7 @@ The latest ADR/PRD v5 correction makes the P0 runtime an external review server,
 The P0 scaffold therefore models this flow as data:
 
 1. GitHub sends PR events to a self-hosted webhook server.
-2. The server prepares a local workspace with `git clone`, `git checkout`, and `git pull origin <branch>`.
+2. The server prepares a local workspace with `git clone`, `git fetch --no-tags origin <branch>`, and `git checkout --detach <head-sha>`.
 3. Claude Code acts as the MVP orchestrator.
 4. Claude Code and Codex reviewer passes run independently with fresh context.
 5. The orchestrator cross-validates candidate findings against the local checkout and PR diff.

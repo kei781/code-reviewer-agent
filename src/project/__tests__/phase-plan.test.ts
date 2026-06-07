@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildReviewServerRunPlan,
@@ -42,15 +43,15 @@ describe("review server run plan", () => {
     localWorkspacePath: "/tmp/sql-agent-pr-42"
   };
 
-  it("plans local git clone, checkout, and pull before agent review", () => {
+  it("pins the local checkout to the webhook head SHA before agent review", () => {
     const plan = buildReviewServerRunPlan(context);
 
     assert.deepEqual(
       plan.workspaceCommands.map((command) => command.args),
       [
         ["clone", "https://github.com/kei781/sql-agent.git", "/tmp/sql-agent-pr-42"],
-        ["checkout", "feature/sql-guard"],
-        ["pull", "origin", "feature/sql-guard"]
+        ["fetch", "--no-tags", "origin", "feature/sql-guard"],
+        ["checkout", "--detach", "abc123"]
       ]
     );
   });
@@ -84,6 +85,14 @@ describe("logger", () => {
         metadata: { command: "setup" }
       }
     ]);
+  });
+});
+
+describe("P0 workflow boundary", () => {
+  it("does not keep repository-hosted AI review workflow YAML files", () => {
+    const workflowFiles = readdirSync(".github/workflows").filter((fileName) => /\.(ya?ml)$/u.test(fileName));
+
+    assert.deepEqual(workflowFiles, []);
   });
 });
 

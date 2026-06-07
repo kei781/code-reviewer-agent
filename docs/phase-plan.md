@@ -10,7 +10,7 @@ This plan is derived from the latest root `ADR.md` and `PRD.md`. Each phase must
 ADR.md/PRD.md §0 개정(완료), `directory-structure.md`·`phase-plan.md` 갱신. 코드 작성은 이 PR 머지 후 시작.
 
 ### v5-P0a — 단일 모델 리뷰 (서버 골격)
-webhook(HMAC)+SQLite 큐+워커 · GitHubAppAdapter(설치토큰·diff/labels·인라인 게시) · GitCli(clone/checkout/pull, 읽기전용 작업공간) · ContainerSandbox(격리·egress allowlist·GitHub토큰 미주입) · ClaudeCodeAgent(단독 리뷰→findings JSON) · ReviewFinding 스키마/파서 · Policy guard(same-repo/draft/fork/risky/한도) · Dedup(SHA·fingerprint) · RunEnsembleReview(단일) · 실패/스킵 코멘트+구조화 로그.
+webhook(HMAC)+SQLite 큐+워커 · GitHubAppAdapter(설치토큰·diff/labels·인라인 게시) · GitCli(clone/fetch/head-SHA checkout, 읽기전용 작업공간) · ContainerSandbox(격리·egress allowlist·GitHub토큰 미주입) · ClaudeCodeAgent(단독 리뷰→findings JSON) · ReviewFinding 스키마/파서 · Policy guard(same-repo/draft/fork/risky/한도) · Dedup(SHA·fingerprint) · RunEnsembleReview(단일) · 실패/스킵 코멘트+구조화 로그.
 
 ### v5-P0b — Codex 추가 + 교차검증 (앵상블 완성)
 Codex 플러그인(fresh context) · A/B 독립 리뷰 프로토콜 · **코드베이스 기반** 교차검증 · 유효 finding만 게시.

@@ -1,6 +1,6 @@
 # Orchestrator Cross-review Prompt
 
-You are the MVP orchestrator running inside Claude Code on the review server. The review server has already cloned the repository, checked out the PR branch, and pulled the branch head locally.
+You are the MVP orchestrator running inside Claude Code on the review server. The review server has already cloned the repository, fetched the PR branch, and checked out the webhook head SHA locally.
 
 ## Mandatory task
 

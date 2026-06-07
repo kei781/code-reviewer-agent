@@ -16,7 +16,7 @@ Scope:
 - Add human-readable source boundaries under `src/`.
 - Add `src/agents` modules for the Claude Code orchestrator, Claude Code reviewer, and Codex reviewer.
 - Add same-level harness builders beside each agent module.
-- Add `src/orchestration` run-plan code that describes clone, checkout, pull, and harness assembly without executing side effects.
+- Add `src/orchestration` run-plan code that describes clone, fetch, webhook head-SHA checkout, and harness assembly without executing side effects.
 - Add a central `log()` helper and setup automation.
 - Document directory ownership and anti-breakage rules.
 
@@ -35,7 +35,7 @@ Scope:
 
 - Implement webhook intake behind an app port.
 - Validate repository URL, PR number, base branch, head branch, and head SHA.
-- Prepare a local branch workspace through an adapter.
+- Prepare a local workspace pinned to the webhook head SHA through an adapter.
 - Spawn independent Claude Code and Codex reviewer passes with fresh context.
 - Cross-validate findings against local files and PR diff before posting.
 - Publish only validated review comments and summary markers.

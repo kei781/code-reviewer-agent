@@ -6,7 +6,7 @@
 - **범위**: GitHub Pull Request 생성 이후의 자동 리뷰, 선택적 자동수정, 재검증, 수렴 판정, 조건부 merge gate
 - **관련 PRD**: `PRD.md`
 - **갱신 (v4)**: 벤더 중심 표현을 역할 중심으로 재정의. 핵심 목표를 `Claude/Codex 연동`이 아니라 **서로 다른 동급 프론티어 모델 두 개가 Reviewer(R) / Fixer(F)를 나눠 맡고, R이 더 이상 blocker를 찾지 못하는 fixpoint 상태로 PR을 수렴시키는 것**으로 명시.
-- **갱신 (v5)**: P0 실행 형태를 GitHub Actions 직접 실행이 아니라 **외부 리뷰서버 webhook → 로컬 clone/checkout/pull → Claude Code 오케스트레이터 → Claude Code/Codex 독립 리뷰 → 코드베이스 기반 교차검증 → PR inline comment 게시** 흐름으로 정정한다.
+- **갱신 (v5)**: P0 실행 형태를 GitHub Actions 직접 실행이 아니라 **외부 리뷰서버 webhook → 로컬 clone/fetch/head-SHA checkout → Claude Code 오케스트레이터 → Claude Code/Codex 독립 리뷰 → 코드베이스 기반 교차검증 → PR inline comment 게시** 흐름으로 정정한다.
 
 ---
 
@@ -166,11 +166,11 @@ fork PR:
 
 ```text
 git clone <repo> <workspace>
-git -C <workspace> checkout <branch>
-git -C <workspace> pull origin <branch>
+git -C <workspace> fetch --no-tags origin <branch>
+git -C <workspace> checkout --detach <head-sha>
 ```
 
-이 로컬 checkout은 단순 편의가 아니라 교차검증의 근거다. Claude Code와 Codex가 독립적으로 후보 리뷰를 만든 뒤, 오케스트레이터는 반드시 checkout된 실제 파일과 diff를 다시 열어 후보 지적을 검증해야 한다. 코드베이스 evidence가 없는 후보는 PR comment로 게시하지 않는다.
+이 로컬 checkout은 단순 편의가 아니라 교차검증의 근거다. checkout은 branch tip이 아니라 webhook payload의 head SHA에 고정되어야 한다. Claude Code와 Codex가 독립적으로 후보 리뷰를 만든 뒤, 오케스트레이터는 반드시 checkout된 실제 파일과 diff를 다시 열어 후보 지적을 검증해야 한다. 코드베이스 evidence가 없는 후보는 PR comment로 게시하지 않는다.
 
 P0 agent topology는 다음과 같다.
 
@@ -801,7 +801,7 @@ FIXER_ACTION_OR_ADAPTER: repository variable
 ### P0 완료 기준
 
 - GitHub PR webhook이 외부 리뷰서버로 전달된다.
-- 리뷰서버가 대상 repository와 PR branch를 로컬 workspace에 `git clone`, `git checkout`, `git pull origin <branch>` 순서로 준비한다.
+- 리뷰서버가 대상 repository와 PR head를 로컬 workspace에 `git clone`, `git fetch --no-tags origin <branch>`, `git checkout --detach <head-sha>` 순서로 준비한다.
 - Codex, Claude Code, Claude Code↔Codex plugin/tooling 사전설정이 문서화된다.
 - agent topology가 명확하다: 오케스트레이터는 Claude Code, reviewer agent 1은 Claude Code, reviewer agent 2는 Codex다.
 - 각 agent module과 같은 레벨에 harness가 존재한다.

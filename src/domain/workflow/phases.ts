@@ -13,7 +13,7 @@ export const implementationPhases = [
     exitCriteria: [
       "Directory boundaries are documented.",
       "GitHub PR events are delivered to the review server by webhook.",
-      "The review server prepares the local codebase with git clone, checkout, and pull for the PR branch.",
+      "The review server prepares the local codebase with git clone, fetch, and checkout pinned to the webhook head SHA.",
       "Agent topology is explicit: orchestrator = Claude Code, reviewer 1 = Claude Code, reviewer 2 = Codex.",
       "Each agent module has a same-level harness file.",
       "Cross-validation requires inspecting the local checkout before publishing findings.",

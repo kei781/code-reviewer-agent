@@ -42,8 +42,8 @@ export const reviewServerSetupRequirements = [
 export function buildWorkspaceSyncCommands(context: PullRequestReviewContext): readonly GitCommandPlan[] {
   return [
     { command: 'git', args: ['clone', context.repositoryUrl, context.localWorkspacePath] },
-    { command: 'git', args: ['checkout', context.headBranch], cwd: context.localWorkspacePath },
-    { command: 'git', args: ['pull', 'origin', context.headBranch], cwd: context.localWorkspacePath }
+    { command: 'git', args: ['fetch', '--no-tags', 'origin', context.headBranch], cwd: context.localWorkspacePath },
+    { command: 'git', args: ['checkout', '--detach', context.headSha], cwd: context.localWorkspacePath }
   ];
 }
 

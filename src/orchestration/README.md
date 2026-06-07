@@ -4,7 +4,7 @@ P0 orchestration code builds side-effect-free review-server run plans.
 
 Allowed:
 
-- assemble clone, checkout, and pull command plans,
+- assemble clone, fetch, and head-SHA checkout command plans,
 - assemble orchestrator and reviewer harness text,
 - combine domain/project/agent metadata into typed plans.
 

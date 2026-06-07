@@ -17,15 +17,15 @@ This document records the corrected P0 runtime shape. The canonical P0 path is a
    - The review server validates the payload and extracts repository URL, PR number, base branch, head branch, and head SHA.
 
 3. Local codebase setup
-   - The review server prepares the exact branch locally:
+   - The review server prepares the exact webhook head SHA locally:
 
    ```text
    git clone <repo> <workspace>
-   git -C <workspace> checkout <branch>
-   git -C <workspace> pull origin <branch>
+   git -C <workspace> fetch --no-tags origin <branch>
+   git -C <workspace> checkout --detach <head-sha>
    ```
 
-   The local checkout is mandatory because independent review and cross-validation must inspect the actual codebase, not only webhook metadata or another agent summary.
+   The local checkout is mandatory because independent review and cross-validation must inspect the actual codebase, not only webhook metadata or another agent summary. Pinning to the webhook head SHA prevents a queued review from silently reviewing a newer branch tip.
 
 4. Orchestrated independent reviews
    - The MVP orchestrator is Claude Code.
