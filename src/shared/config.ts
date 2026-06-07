@@ -10,8 +10,6 @@ export const requiredConfigKeys = [
   "GITHUB_REPO",
   "CLAUDE_CODE_COMMAND",
   "CLAUDE_CODE_AUTH_MODE",
-  "CODEX_COMMAND",
-  "CODEX_AUTH_MODE",
   "MODEL_EGRESS_ALLOWLIST",
   "HUMAN_REVIEW_LABEL",
   "SECURITY_SENSITIVE_LABEL",
@@ -26,7 +24,7 @@ export type ConfigEnvSource = {
   readonly [key: string]: string | undefined;
 };
 
-export interface ReviewerCliConfig {
+export interface OrchestratorCliConfig {
   readonly command: string;
   readonly authMode: string;
 }
@@ -45,10 +43,7 @@ export interface Config {
     readonly owner: string;
     readonly repo: string;
   };
-  readonly reviewers: {
-    readonly claudeCode: ReviewerCliConfig;
-    readonly codex: ReviewerCliConfig;
-  };
+  readonly orchestrator: OrchestratorCliConfig;
   readonly modelEgressAllowlist: readonly string[];
   readonly policy: {
     readonly labels: {
@@ -121,15 +116,9 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
         owner: requiredValue(env, "GITHUB_OWNER"),
         repo: requiredValue(env, "GITHUB_REPO")
       },
-      reviewers: {
-        claudeCode: {
-          command: requiredValue(env, "CLAUDE_CODE_COMMAND"),
-          authMode: requiredValue(env, "CLAUDE_CODE_AUTH_MODE")
-        },
-        codex: {
-          command: requiredValue(env, "CODEX_COMMAND"),
-          authMode: requiredValue(env, "CODEX_AUTH_MODE")
-        }
+      orchestrator: {
+        command: requiredValue(env, "CLAUDE_CODE_COMMAND"),
+        authMode: requiredValue(env, "CLAUDE_CODE_AUTH_MODE")
       },
       modelEgressAllowlist,
       policy: {

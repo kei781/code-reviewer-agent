@@ -79,6 +79,11 @@ describe("review server run plan", () => {
   it("keeps Claude Code and Codex reviewer harnesses independent", () => {
     const plan = buildReviewServerRunPlan(context);
 
+    assert.deepEqual(plan.setupRequirements, [
+      "codex-cli-installed",
+      "claude-code-installed",
+      "claude-code-codex-plugin-connected"
+    ]);
     assert.match(plan.reviewerHarnesses.claudeCode, /Work independently from Codex/);
     assert.match(plan.reviewerHarnesses.codex, /Work independently from Claude Code/);
     assert.match(plan.orchestratorHarness, /cross-validate/);

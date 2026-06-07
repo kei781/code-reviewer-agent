@@ -31,8 +31,8 @@ The P0 scaffold therefore models this flow as data:
 
 1. GitHub sends PR events to a self-hosted webhook server.
 2. The server prepares a local workspace with `git clone`, `git fetch --no-tags origin <branch>`, and `git checkout --detach <head-sha>`.
-3. Claude Code acts as the MVP orchestrator.
-4. Claude Code and Codex reviewer passes run independently with fresh context.
+3. The server launches Claude Code as the MVP orchestrator.
+4. Claude Code invokes both fresh-context reviewer passes: Claude Code directly and Codex through the pre-connected plugin/tooling.
 5. The orchestrator cross-validates candidate findings against the local checkout and PR diff.
 6. Only codebase-backed findings are posted as review comments.
 

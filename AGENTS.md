@@ -18,10 +18,11 @@ The current runtime is:
 
 1. GitHub PR event arrives at the self-hosted webhook review server.
 2. The review server prepares a local checkout pinned to the webhook head SHA.
-3. Claude Code orchestrates two fresh-context reviewer passes: Claude Code and Codex.
-4. The orchestrator cross-validates candidate findings against the local checkout and PR diff.
-5. Only valid findings are published as PR review comments.
-6. A human maintainer decides whether to resolve comments or request additional development.
+3. The review server launches Claude Code as the orchestrator.
+4. Claude Code orchestrates two fresh-context reviewer passes: Claude Code and Codex, invoking Codex through pre-connected plugin/tooling rather than a server-side Codex runtime command.
+5. The orchestrator cross-validates candidate findings against the local checkout and PR diff.
+6. Only valid findings are published as PR review comments.
+7. A human maintainer decides whether to resolve comments or request additional development.
 
 Codex is the second reviewer in this architecture, not an implementer role. Review comments are signals, not formal approvals or merge authorization.
 
