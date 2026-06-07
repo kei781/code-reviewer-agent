@@ -1,0 +1,43 @@
+name: Claude Code
+
+# PR / 이슈 / 코멘트에서 "@claude" 를 멘션하면 Claude(GitHub App)가 응답한다.
+# 코멘트는 Claude GitHub App 계정 이름/아바타로 게시된다.
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    # @claude 가 실제로 언급된 경우에만 실행해서 러너 시간을 아낀다.
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Anthropic API 키 사용 (콘솔에서 발급, 사용량 과금)
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 구독(Pro/Max) OAuth 토큰을 쓰려면 위 줄을 지우고 아래 줄을 사용:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          trigger_phrase: "@claude"
