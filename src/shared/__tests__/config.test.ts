@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -47,7 +48,12 @@ describe("shared runtime config", () => {
       assert.match(example, new RegExp(`^${key}=`, "mu"));
     }
 
-    assert.match(gitignore, /^!.env.example$/mu);
+    assert.match(gitignore, /^\.env$/mu);
+    assert.match(gitignore, /^\.env\.\*$/mu);
+    assert.match(gitignore, /^!\.env\.example$/mu);
+    assert.equal(isGitIgnored(".env"), true);
+    assert.equal(isGitIgnored(".env.local"), true);
+    assert.equal(isGitIgnored(".env.example"), false);
     assert.doesNotMatch(example, /ghp_[A-Za-z0-9_]+/u);
     assert.doesNotMatch(example, /sk-[A-Za-z0-9_]+/u);
   });
@@ -92,6 +98,25 @@ describe("shared runtime config", () => {
     }
   });
 
+  it("rejects an egress allowlist that contains no hosts", () => {
+    const result = loadConfigFromEnv({
+      ...completeEnv,
+      MODEL_EGRESS_ALLOWLIST: ",,"
+    });
+
+    assert.equal(result.ok, false);
+
+    if (!result.ok) {
+      assert.deepEqual(result.missingKeys, []);
+      assert.deepEqual(result.invalidValues, [
+        {
+          key: "MODEL_EGRESS_ALLOWLIST",
+          reason: "must list at least one allowed egress host"
+        }
+      ]);
+    }
+  });
+
   it("keeps process.env reads isolated to the central config module", () => {
     const envReaders = listTypeScriptFiles("src")
       .filter((path) => !path.includes(`${separator()}__tests__${separator()}`))
@@ -118,4 +143,19 @@ function listTypeScriptFiles(directory: string): string[] {
 
 function separator(): string {
   return /\\/u.test(join("a", "b")) ? "\\" : "/";
+}
+
+function isGitIgnored(path: string): boolean {
+  const result = spawnSync("git", ["check-ignore", "--quiet", path], { stdio: "ignore" });
+
+  if (result.status === 0) {
+    return true;
+  }
+
+  if (result.status === 1) {
+    return false;
+  }
+
+  const errorMessage = result.error === undefined ? `exit code ${result.status ?? "unknown"}` : result.error.message;
+  throw new Error(`git check-ignore failed for ${path}: ${errorMessage}`);
 }

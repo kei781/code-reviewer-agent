@@ -110,8 +110,19 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
   const invalidValues: InvalidConfigValue[] = [];
   const port = readPositiveInteger(env, "REVIEW_SERVER_PORT", invalidValues);
   const maxFixAttempts = readPositiveInteger(env, "MAX_FIX_ATTEMPTS", invalidValues);
+  const modelEgressAllowlist = readNonEmptyCsv(
+    env,
+    "MODEL_EGRESS_ALLOWLIST",
+    invalidValues,
+    "must list at least one allowed egress host"
+  );
 
-  if (invalidValues.length > 0 || port === undefined || maxFixAttempts === undefined) {
+  if (
+    invalidValues.length > 0 ||
+    port === undefined ||
+    maxFixAttempts === undefined ||
+    modelEgressAllowlist === undefined
+  ) {
     return { ok: false, missingKeys: [], invalidValues };
   }
 
@@ -145,7 +156,7 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
         adapter: requiredValue(env, "FIXER_ADAPTER"),
         apiKey: requiredValue(env, "FIXER_API_KEY")
       },
-      modelEgressAllowlist: readCsv(env, "MODEL_EGRESS_ALLOWLIST"),
+      modelEgressAllowlist,
       policy: {
         maxFixAttempts,
         labels: {
@@ -185,6 +196,22 @@ function readCsv(env: ConfigEnvSource, key: ConfigKey): readonly string[] {
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
+}
+
+function readNonEmptyCsv(
+  env: ConfigEnvSource,
+  key: ConfigKey,
+  invalidValues: InvalidConfigValue[],
+  reason: string
+): readonly string[] | undefined {
+  const values = readCsv(env, key);
+
+  if (values.length === 0) {
+    invalidValues.push({ key, reason });
+    return undefined;
+  }
+
+  return values;
 }
 
 function readPositiveInteger(
