@@ -1,20 +1,21 @@
 {
   "name": "code-reviewer-agent",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Frontier Pair 기반 AI PR 리뷰·수정·수렴 파이프라인 구현 저장소",
+  "description": "TypeScript scaffold for the Frontier Pair AI PR review pipeline.",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "setup": "node scripts/setup.mjs",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "node --test \"dist/**/*.test.js\"",
-    "build": "tsc -p tsconfig.json",
     "check": "npm run typecheck && npm run build && npm run test"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "devDependencies": {
     "@types/node": "24.12.4",
-    "typescript": "5.9.3"
+    "typescript": "5.8.3"
   }
 }
