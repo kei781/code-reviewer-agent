@@ -17,7 +17,7 @@ export type { PolicyDecision, PullRequestPolicyInput } from "./domain/policy/pul
 export { evaluateRiskyPaths, riskyPathPatterns } from "./domain/policy/riskyPathPolicy.js";
 export type { RiskyPathDecision, RiskyPathMatch, RiskyPathSeverity } from "./domain/policy/riskyPathPolicy.js";
 export { extractActionableMarkers } from "./domain/fixer/actionableMarker.js";
-export type { ActionableMarker, ActionableSeverity } from "./domain/fixer/actionableMarker.js";
+export type { ActionableMarker, ActionableMarkerSource, ActionableSeverity } from "./domain/fixer/actionableMarker.js";
 export { decideModelPairIndependence } from "./domain/policy/modelPairPolicy.js";
 export type {
   ModelIdentity,

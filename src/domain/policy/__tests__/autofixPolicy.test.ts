@@ -11,16 +11,48 @@ import {
 
 describe("actionable reviewer markers", () => {
   it("parses actionable reviewer markers into stable fixer inputs", () => {
-    const markers = extractActionableMarkers(`
+    const markers = extractActionableMarkers(trustedReviewerSummary(`
       <!-- ai-review:actionable id=A1 blocker=B1 severity=high category=security -->
       Review prose remains outside the contract.
       <!-- ai-review:actionable id=A2 blocker=B2 severity=medium category=tests -->
       <!-- ai-review:actionable id=BROKEN blocker=B3 severity=low -->
-    `);
+    `));
 
     assert.deepEqual(markers, [
       { id: "A1", blockerId: "B1", severity: "high", category: "security" },
       { id: "A2", blockerId: "B2", severity: "medium", category: "tests" }
+    ]);
+  });
+
+  it("ignores untrusted comments and similarly prefixed marker names", () => {
+    const untrustedMarkers = extractActionableMarkers({
+      markdown: `
+        <!-- ai-review:summary -->
+        <!-- ai-review:actionable id=A1 blocker=B1 severity=critical category=security -->
+      `,
+      authorLogin: "random-user",
+      trustedReviewerLogins: ["reviewer-bot"]
+    });
+    const prefixedMarkers = extractActionableMarkers(trustedReviewerSummary(`
+      <!-- ai-review:actionable-disabled id=A1 blocker=B1 severity=high category=security -->
+      <!-- ai-review:actionable-summary id=A2 blocker=B2 severity=high category=security -->
+      <!-- ai-review:actionable id=A3 blocker=B3 severity=high category=security -->
+    `));
+
+    assert.deepEqual(untrustedMarkers, []);
+    assert.deepEqual(prefixedMarkers, [{ id: "A3", blockerId: "B3", severity: "high", category: "security" }]);
+  });
+
+  it("deduplicates actionable markers by id", () => {
+    const markers = extractActionableMarkers(trustedReviewerSummary(`
+      <!-- ai-review:actionable id=A1 blocker=B1 severity=high category=security -->
+      <!-- ai-review:actionable id=A1 blocker=B1 severity=medium category=tests -->
+      <!-- ai-review:actionable id=A2 blocker=B2 severity=low category=tests -->
+    `));
+
+    assert.deepEqual(markers, [
+      { id: "A1", blockerId: "B1", severity: "high", category: "security" },
+      { id: "A2", blockerId: "B2", severity: "low", category: "tests" }
     ]);
   });
 });
@@ -73,6 +105,7 @@ describe("autofix eligibility policy", () => {
       ["attempt cap", { fixAttempts: 3 }, "attempt-cap-reached"],
       ["stale reviewer SHA", { reviewerReviewedSha: "old-sha" }, "stale-review"],
       ["missing actionable markers", { actionableMarkers: [] }, "no-actionable-items"],
+      ["processed actionable markers", { processedActionableIds: ["A1"] }, "actionable-already-processed"],
       [
         "model pair policy failure",
         { modelPair: validModelPair({ fixer: { provider: "openai", model: "small-helper", family: "small", isFrontier: false } }) },
@@ -88,6 +121,21 @@ describe("autofix eligibility policy", () => {
       assert.ok(decision.reasons.includes(expectedReason), name);
     }
   });
+
+  it("returns only unprocessed actionable markers to the future fixer analyze pass", () => {
+    const decision = decideAutofixEligibility(
+      validAutofixInput({
+        actionableMarkers: [
+          { id: "A1", blockerId: "B1", severity: "high", category: "security" },
+          { id: "A2", blockerId: "B2", severity: "medium", category: "tests" }
+        ],
+        processedActionableIds: ["A1"]
+      })
+    );
+
+    assert.equal(decision.allowed, true);
+    assert.deepEqual(decision.actionableMarkers, [{ id: "A2", blockerId: "B2", severity: "medium", category: "tests" }]);
+  });
 });
 
 function validAutofixInput(overrides: Partial<AutofixPolicyInput> = {}): AutofixPolicyInput {
@@ -102,6 +150,7 @@ function validAutofixInput(overrides: Partial<AutofixPolicyInput> = {}): Autofix
     currentHeadSha: "head-sha",
     reviewerReviewedSha: "head-sha",
     actionableMarkers: [{ id: "A1", blockerId: "B1", severity: "high", category: "security" }],
+    processedActionableIds: [],
     modelPair: validModelPair(),
     ...overrides
   };
@@ -112,5 +161,13 @@ function validModelPair(overrides: Partial<ModelPairPolicyInput> = {}): ModelPai
     reviewer: { provider: "anthropic", model: "claude-opus", family: "claude", isFrontier: true },
     fixer: { provider: "openai", model: "gpt-5", family: "gpt", isFrontier: true },
     ...overrides
+  };
+}
+
+function trustedReviewerSummary(markdown: string): Parameters<typeof extractActionableMarkers>[0] {
+  return {
+    markdown: `<!-- ai-review:summary -->\n${markdown}`,
+    authorLogin: "reviewer-bot",
+    trustedReviewerLogins: ["reviewer-bot"]
   };
 }

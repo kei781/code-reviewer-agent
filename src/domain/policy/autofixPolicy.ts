@@ -16,6 +16,7 @@ export type AutofixBlockReason =
   | "attempt-cap-reached"
   | "stale-review"
   | "no-actionable-items"
+  | "actionable-already-processed"
   | "model-pair-not-independent";
 
 export type AutofixRecommendedLabel = "needs-human-review" | "security-sensitive" | "ai-blocked";
@@ -32,6 +33,7 @@ export interface AutofixPolicyInput {
   readonly currentHeadSha: string;
   readonly reviewerReviewedSha: string;
   readonly actionableMarkers: readonly ActionableMarker[];
+  readonly processedActionableIds: readonly string[];
   readonly modelPair: ModelPairPolicyInput;
 }
 
@@ -54,6 +56,7 @@ export function decideAutofixEligibility(input: AutofixPolicyInput): AutofixPoli
   const recommendedLabels = new Set<AutofixRecommendedLabel>();
   const riskyPathDecision = evaluateRiskyPaths(input.changedPaths);
   const modelPairDecision = decideModelPairIndependence(input.modelPair);
+  const actionableMarkers = filterUnprocessedActionableMarkers(input.actionableMarkers, input.processedActionableIds);
 
   if (!labels.has(autofixLabel)) {
     reasons.push("missing-autofix-label");
@@ -94,6 +97,10 @@ export function decideAutofixEligibility(input: AutofixPolicyInput): AutofixPoli
     reasons.push("no-actionable-items");
   }
 
+  if (input.actionableMarkers.length > 0 && actionableMarkers.length === 0) {
+    reasons.push("actionable-already-processed");
+  }
+
   if (!modelPairDecision.allowed) {
     reasons.push("model-pair-not-independent");
     recommendedLabels.add("needs-human-review");
@@ -106,10 +113,23 @@ export function decideAutofixEligibility(input: AutofixPolicyInput): AutofixPoli
     nextAction: allowed ? "fixer-analyze" : "skip",
     reasons,
     recommendedLabels: [...recommendedLabels],
-    actionableMarkers: input.actionableMarkers,
+    actionableMarkers,
     riskyPathDecision,
     modelPairDecision
   };
+}
+
+function filterUnprocessedActionableMarkers(
+  actionableMarkers: readonly ActionableMarker[],
+  processedActionableIds: readonly string[]
+): readonly ActionableMarker[] {
+  const processedIds = new Set(processedActionableIds.map(normalizeActionableId));
+
+  return actionableMarkers.filter((marker) => !processedIds.has(normalizeActionableId(marker.id)));
+}
+
+function normalizeActionableId(value: string): string {
+  return value.trim();
 }
 
 function recommendExistingBlockingLabels(

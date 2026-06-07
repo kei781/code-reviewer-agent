@@ -1,3 +1,5 @@
+import { reviewSummaryMarker } from "../review/reviewMarker.js";
+
 export type ActionableSeverity = "low" | "medium" | "high" | "critical";
 
 export interface ActionableMarker {
@@ -7,25 +9,41 @@ export interface ActionableMarker {
   readonly category: string;
 }
 
-const actionableMarkerPattern = /<!--\s*ai-review:actionable(?<attributes>.*?)-->/gsu;
+export interface ActionableMarkerSource {
+  readonly markdown: string;
+  readonly authorLogin: string;
+  readonly trustedReviewerLogins: readonly string[];
+}
+
+const actionableMarkerPattern = /<!--\s*ai-review:actionable(?:\s+(?<attributes>.*?))?\s*-->/gsu;
 const attributePattern = /([A-Za-z][A-Za-z0-9_-]*)=("[^"]*"|'[^']*'|[^\s>]+)/gu;
 
-export function extractActionableMarkers(markdown: string): readonly ActionableMarker[] {
+export function extractActionableMarkers(source: ActionableMarkerSource): readonly ActionableMarker[] {
+  if (!isTrustedReviewerSummary(source)) {
+    return [];
+  }
+
   const markers: ActionableMarker[] = [];
+  const seenIds = new Set<string>();
 
-  for (const markerMatch of markdown.matchAll(actionableMarkerPattern)) {
+  for (const markerMatch of source.markdown.matchAll(actionableMarkerPattern)) {
     const attributes = parseAttributes(markerMatch.groups?.attributes ?? "");
-    const id = attributes.id;
-    const blockerId = attributes.blocker;
-    const severity = attributes.severity;
-    const category = attributes.category;
+    const id = normalizeAttribute(attributes.id);
+    const blockerId = normalizeAttribute(attributes.blocker);
+    const severity = normalizeAttribute(attributes.severity);
+    const category = normalizeAttribute(attributes.category);
 
-    if (isNonEmpty(id) && isNonEmpty(blockerId) && isActionableSeverity(severity) && isNonEmpty(category)) {
+    if (isNonEmpty(id) && isNonEmpty(blockerId) && isActionableSeverity(severity) && isNonEmpty(category) && !seenIds.has(id)) {
       markers.push({ id, blockerId, severity, category });
+      seenIds.add(id);
     }
   }
 
   return markers;
+}
+
+function isTrustedReviewerSummary(source: ActionableMarkerSource): boolean {
+  return source.markdown.includes(reviewSummaryMarker) && source.trustedReviewerLogins.map(normalizeLogin).includes(normalizeLogin(source.authorLogin));
 }
 
 function parseAttributes(value: string): Record<string, string> {
@@ -51,6 +69,14 @@ function stripQuotes(value: string): string {
   }
 
   return value;
+}
+
+function normalizeAttribute(value: string | undefined): string | undefined {
+  return value?.trim();
+}
+
+function normalizeLogin(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function isNonEmpty(value: string | undefined): value is string {
