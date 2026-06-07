@@ -19,29 +19,26 @@ describe("implementation phase plan", () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
-  it("marks phase 6 as the current implementation phase", () => {
-    const phase5 = implementationPhases.find((phase) => phase.id === "phase-5");
-    const phase6 = implementationPhases.find((phase) => phase.id === "phase-6");
-
-    assert.equal(phase5?.status, "implemented");
-    assert.equal(phase6?.status, "implementing");
+  it("marks every planned implementation phase as implemented", () => {
+    assert.deepEqual(
+      implementationPhases.map((phase) => [phase.id, phase.status]),
+      [
+        ["phase-0", "implemented"],
+        ["phase-1", "implemented"],
+        ["phase-2", "implemented"],
+        ["phase-3", "implemented"],
+        ["phase-4", "implemented"],
+        ["phase-5", "implemented"],
+        ["phase-6", "implemented"]
+      ]
+    );
   });
 
-  it("records merged phases as implemented without stale review blockers", () => {
-    const phase0 = implementationPhases.find((phase) => phase.id === "phase-0");
-    const phase1 = implementationPhases.find((phase) => phase.id === "phase-1");
-    const phase2 = implementationPhases.find((phase) => phase.id === "phase-2");
-    const phase3 = implementationPhases.find((phase) => phase.id === "phase-3");
-    const phase4 = implementationPhases.find((phase) => phase.id === "phase-4");
-    const phase5 = implementationPhases.find((phase) => phase.id === "phase-5");
+  it("records no active implementation phase or stale review blocker", () => {
+    const activePhases = implementationPhases.filter((phase) => phase.status !== "implemented");
     const firstBlockedPhase = getFirstBlockedPhase();
 
-    assert.equal(phase0?.status, "implemented");
-    assert.equal(phase1?.status, "implemented");
-    assert.equal(phase2?.status, "implemented");
-    assert.equal(phase3?.status, "implemented");
-    assert.equal(phase4?.status, "implemented");
-    assert.equal(phase5?.status, "implemented");
+    assert.deepEqual(activePhases, []);
     assert.equal(firstBlockedPhase, undefined);
   });
 });
