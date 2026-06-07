@@ -1,10 +1,10 @@
 # Phase 0 Directory Structure
 
-Phase 0 makes the project easy to inspect and safe to extend. It does not implement runtime review execution, autofix, formal approval, thread resolution, or merge automation.
+Phase 0 makes the project easy to inspect and safe to extend. It does not implement runtime review execution, code modification, formal approval, thread resolution, or merge automation.
 
 ## Source of Truth
 
-- `ADR.md`: v5 self-hosted review-server correction, with Reviewer/Fixer/Orchestrator/policy/adapter separation.
+- `ADR.md`: v5 self-hosted review-server correction, with reviewer, orchestrator, policy, and adapter separation.
 - `PRD.md`: P0 review-server cross-validation MVP.
 - `docs/superpowers/specs/2026-06-04-frontier-pair-self-hosted-orchestrator-design.md`: detailed v5 design.
 
@@ -18,8 +18,7 @@ src/
 |   `-- workflow/
 |-- app/
 |-- adapters/
-|   |-- reviewer/
-|   `-- fixer/
+|   `-- reviewer/
 |-- agents/
 |-- orchestration/
 |-- project/
@@ -79,9 +78,9 @@ P0 does not run AI review through repository-hosted GitHub Actions. If later pha
 
 1. Do not put vendor-specific model logic in `src/domain`.
 2. Do not move agent harnesses away from their same-level agent modules.
-3. Do not add write-capable fixer behavior to P0.
+3. Do not add write-capable model behavior to P0.
 4. Do not treat reviewer comments as formal approvals or merge authorization.
-5. Do not introduce fork secret access, branch-protection bypass, or auto-merge before the phase that explicitly allows it.
+5. Do not introduce fork secret access, branch-protection bypass, or merge automation into the review-only runtime.
 6. Do not write directly to the console outside a `log()` helper.
 7. Do not duplicate executable policy only in prompts; reusable policy belongs in TypeScript modules.
 

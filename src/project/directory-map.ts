@@ -8,7 +8,7 @@ export interface DirectoryRule {
 export const directoryRules = [
   {
     path: "src/domain",
-    purpose: "Pure reusable policies, typed contracts, state machines, and convergence rules.",
+    purpose: "Pure reusable review policies, typed contracts, and state machines.",
     mayDependOn: ["src/shared", "src/project"],
     mustNotContain: ["GitHub SDK calls", "model SDK calls", "environment variable reads", "filesystem writes", "shell execution"]
   },
@@ -22,7 +22,7 @@ export const directoryRules = [
     path: "src/adapters",
     purpose: "Concrete implementations for GitHub, model providers, artifacts, commands, and CI runtimes.",
     mayDependOn: ["src/app", "src/domain", "src/shared", "src/project"],
-    mustNotContain: ["new domain policy definitions", "R/F role conflation", "unaudited write-token model loops"]
+    mustNotContain: ["new domain policy definitions", "hidden reviewer context sharing", "unaudited write-token model loops"]
   },
   {
     path: "src/agents",

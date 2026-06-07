@@ -6,7 +6,7 @@ import {
   validateFindingForPublication
 } from '../domain/review/crossValidation.js';
 import type { PullRequestReviewContext } from '../domain/review/pullRequestReviewContext.js';
-import { renderReviewMarkers, type ReviewConvergenceState } from '../domain/review/reviewMarker.js';
+import { renderReviewMarkers, type ReviewPublicationState } from '../domain/review/reviewMarker.js';
 import type { MergeSignal } from '../domain/review/reviewSignal.js';
 
 export type PullRequestWebhookAction = 'opened' | 'synchronize' | 'reopened' | 'ready_for_review';
@@ -99,7 +99,6 @@ export type ReviewSkipReason =
 
 export type HumanReviewReason = 'required-risky-path' | 'dropped-blocker-candidate';
 export type ReviewRecommendedLabel = 'security-sensitive';
-export type ReviewPassOrigin = 'FIRST_PASS' | 'LOOP_FIXPOINT' | 'NONE';
 
 export interface ReviewSkipPublication {
   readonly deliveryId: string;
@@ -122,7 +121,6 @@ export interface ReviewPublicationSummary {
   readonly droppedFindingCount: number;
   readonly dedupedFindingCount: number;
   readonly mergeSignal: MergeSignal;
-  readonly passOrigin: ReviewPassOrigin;
   readonly humanReviewReasons: readonly HumanReviewReason[];
   readonly recommendedLabels: readonly ReviewRecommendedLabel[];
   readonly riskyPathMatches: readonly RiskyPathMatch[];
@@ -227,7 +225,6 @@ export async function runEnsembleReview(
       droppedFindingCount,
       dedupedFindingCount,
       mergeSignal: reviewDecision.mergeSignal,
-      passOrigin: reviewDecision.passOrigin,
       humanReviewReasons: reviewDecision.humanReviewReasons,
       recommendedLabels: reviewDecision.recommendedLabels,
       riskyPathMatches: riskyPathDecision.matches
@@ -356,7 +353,6 @@ function decideMergeSignal(input: {
   readonly riskyPathMatches: readonly RiskyPathMatch[];
 }): {
   readonly mergeSignal: MergeSignal;
-  readonly passOrigin: ReviewPassOrigin;
   readonly humanReviewReasons: readonly HumanReviewReason[];
   readonly recommendedLabels: readonly ReviewRecommendedLabel[];
 } {
@@ -375,7 +371,6 @@ function decideMergeSignal(input: {
   if (humanReviewReasons.length > 0) {
     return {
       mergeSignal: 'HUMAN_REVIEW_REQUIRED',
-      passOrigin: 'NONE',
       humanReviewReasons,
       recommendedLabels
     };
@@ -384,7 +379,6 @@ function decideMergeSignal(input: {
   if (input.keptFindings.some((finding) => finding.severity === 'blocker')) {
     return {
       mergeSignal: 'BLOCKED',
-      passOrigin: 'NONE',
       humanReviewReasons,
       recommendedLabels
     };
@@ -392,7 +386,6 @@ function decideMergeSignal(input: {
 
   return {
     mergeSignal: 'PASS',
-    passOrigin: 'FIRST_PASS',
     humanReviewReasons,
     recommendedLabels
   };
@@ -405,7 +398,6 @@ function buildReviewPublicationSummary(input: {
   readonly droppedFindingCount: number;
   readonly dedupedFindingCount: number;
   readonly mergeSignal: MergeSignal;
-  readonly passOrigin: ReviewPassOrigin;
   readonly humanReviewReasons: readonly HumanReviewReason[];
   readonly recommendedLabels: readonly ReviewRecommendedLabel[];
   readonly riskyPathMatches: readonly RiskyPathMatch[];
@@ -417,15 +409,14 @@ function buildReviewPublicationSummary(input: {
       reviewedSha: input.reviewedSha,
       epoch: 1,
       round: 1,
-      convergence: toConvergenceState(input.mergeSignal),
-      mergeSignal: input.mergeSignal,
-      passOrigin: input.passOrigin
+      reviewState: toReviewPublicationState(input.mergeSignal),
+      mergeSignal: input.mergeSignal
     })
   };
 }
 
-function toConvergenceState(mergeSignal: MergeSignal): ReviewConvergenceState {
-  return mergeSignal === 'PASS' ? 'CONVERGED_CLEAN' : 'HUMAN_REVIEW_REQUIRED';
+function toReviewPublicationState(mergeSignal: MergeSignal): ReviewPublicationState {
+  return mergeSignal === 'HUMAN_REVIEW_REQUIRED' ? 'HUMAN_REVIEW_REQUIRED' : 'REVIEWED';
 }
 
 function errorMessage(error: unknown): string {

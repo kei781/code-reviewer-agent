@@ -20,5 +20,5 @@ Implement the webhook-driven P0 review-server cross-validation MVP described by 
 ## Guardrails
 
 - Keep P0 review-only.
-- Do not add autofix, formal approval, thread resolution, auto-merge, branch-protection bypass, or write-token model behavior.
+- Do not add code modification, formal approval, thread resolution, merge automation, branch-protection bypass, or write-token model behavior.
 - Keep domain rules pure and adapter details behind ports.

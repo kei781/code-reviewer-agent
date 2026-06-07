@@ -299,7 +299,7 @@ describe("runEnsembleReview", () => {
     assert.deepEqual(published.summary.recommendedLabels, ["security-sensitive"]);
   });
 
-  it("keeps PASS distinct from BLOCKED and records first-pass origin", async () => {
+  it("keeps PASS distinct from BLOCKED and records review-only publication state", async () => {
     const { ports, calls } = createPorts({
       candidateFindings: [
         candidateFinding({
@@ -327,7 +327,8 @@ describe("runEnsembleReview", () => {
     });
 
     const published = calls.publishReview[0] as Parameters<ReviewServerPorts["publisher"]["publishReview"]>[0];
-    assert.equal(published.summary.passOrigin, "FIRST_PASS");
+    assert.ok(published.summary.markerLines.includes("<!-- ai-review:review-state=REVIEWED -->"));
+    assert.ok(published.summary.markerLines.includes("<!-- ai-review:MERGE_SIGNAL=PASS -->"));
   });
 
   it("deduplicates previously posted finding fingerprints without hiding active blockers", async () => {
