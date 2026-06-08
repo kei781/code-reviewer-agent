@@ -6,8 +6,6 @@ export const requiredConfigKeys = [
   "GITHUB_APP_ID",
   "GITHUB_APP_PRIVATE_KEY_PATH",
   "GITHUB_WEBHOOK_SECRET",
-  "GITHUB_OWNER",
-  "GITHUB_REPO",
   "CLAUDE_CODE_COMMAND",
   "CLAUDE_CODE_AUTH_MODE",
   "MODEL_EGRESS_ALLOWLIST",
@@ -40,11 +38,12 @@ export interface Config {
     readonly appId: string;
     readonly privateKeyPath: string;
     readonly webhookSecret: string;
-    readonly owner: string;
-    readonly repo: string;
   };
   readonly orchestrator: OrchestratorCliConfig;
   readonly modelEgressAllowlist: readonly string[];
+  // Optional repo scope. Empty = review ANY repo the GitHub App is installed on;
+  // repo identity is taken per-event from the webhook payload, not from static config.
+  readonly repoAllowlist: readonly string[];
   readonly policy: {
     readonly labels: {
       readonly humanReview: string;
@@ -112,15 +111,14 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
       github: {
         appId: requiredValue(env, "GITHUB_APP_ID"),
         privateKeyPath: requiredValue(env, "GITHUB_APP_PRIVATE_KEY_PATH"),
-        webhookSecret: requiredValue(env, "GITHUB_WEBHOOK_SECRET"),
-        owner: requiredValue(env, "GITHUB_OWNER"),
-        repo: requiredValue(env, "GITHUB_REPO")
+        webhookSecret: requiredValue(env, "GITHUB_WEBHOOK_SECRET")
       },
       orchestrator: {
         command: requiredValue(env, "CLAUDE_CODE_COMMAND"),
         authMode: requiredValue(env, "CLAUDE_CODE_AUTH_MODE")
       },
       modelEgressAllowlist,
+      repoAllowlist: readOptionalCsv(env, "REVIEW_REPO_ALLOWLIST"),
       policy: {
         labels: {
           humanReview: requiredValue(env, "HUMAN_REVIEW_LABEL"),
@@ -151,6 +149,19 @@ function requiredValue(env: ConfigEnvSource, key: ConfigKey): string {
 
 function readCsv(env: ConfigEnvSource, key: ConfigKey): readonly string[] {
   return requiredValue(env, key)
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function readOptionalCsv(env: ConfigEnvSource, key: string): readonly string[] {
+  const value = env[key]?.trim();
+
+  if (value === undefined || value.length === 0) {
+    return [];
+  }
+
+  return value
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
