@@ -108,6 +108,30 @@ describe("shared runtime config", () => {
     if (scoped.ok) {
       assert.deepEqual(scoped.config.repoAllowlist, ["kei781/sql-agent", "kei781/code-reviewer-agent"]);
     }
+
+    // Empty / whitespace-only stays repo-agnostic (intentional).
+    const emptyString = loadConfigFromEnv({ ...completeEnv, REVIEW_REPO_ALLOWLIST: "   " });
+    assert.equal(emptyString.ok, true);
+    if (emptyString.ok) {
+      assert.deepEqual(emptyString.config.repoAllowlist, []);
+    }
+  });
+
+  it("rejects a repo allowlist that is set but lists no valid entries (no silent fail-open)", () => {
+    for (const value of [",,", " , "]) {
+      const result = loadConfigFromEnv({ ...completeEnv, REVIEW_REPO_ALLOWLIST: value });
+
+      assert.equal(result.ok, false, `expected ${JSON.stringify(value)} to be rejected`);
+      if (!result.ok) {
+        assert.deepEqual(result.missingKeys, []);
+        assert.deepEqual(result.invalidValues, [
+          {
+            key: "REVIEW_REPO_ALLOWLIST",
+            reason: "is set but lists no valid owner/repo entries"
+          }
+        ]);
+      }
+    }
   });
 
   it("rejects an egress allowlist that contains no hosts", () => {

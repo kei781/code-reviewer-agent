@@ -18,6 +18,9 @@ export const requiredConfigKeys = [
 
 export type ConfigKey = (typeof requiredConfigKeys)[number];
 
+export const optionalConfigKeys = ["REVIEW_REPO_ALLOWLIST"] as const;
+export type OptionalConfigKey = (typeof optionalConfigKeys)[number];
+
 export type ConfigEnvSource = {
   readonly [key: string]: string | undefined;
 };
@@ -56,7 +59,7 @@ export interface Config {
 }
 
 export interface InvalidConfigValue {
-  readonly key: ConfigKey;
+  readonly key: ConfigKey | OptionalConfigKey;
   readonly reason: string;
 }
 
@@ -91,10 +94,13 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
     "must list at least one allowed egress host"
   );
 
+  const repoAllowlist = readOptionalAllowlist(env, "REVIEW_REPO_ALLOWLIST", invalidValues);
+
   if (
     invalidValues.length > 0 ||
     port === undefined ||
-    modelEgressAllowlist === undefined
+    modelEgressAllowlist === undefined ||
+    repoAllowlist === undefined
   ) {
     return { ok: false, missingKeys: [], invalidValues };
   }
@@ -118,7 +124,7 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
         authMode: requiredValue(env, "CLAUDE_CODE_AUTH_MODE")
       },
       modelEgressAllowlist,
-      repoAllowlist: readOptionalCsv(env, "REVIEW_REPO_ALLOWLIST"),
+      repoAllowlist,
       policy: {
         labels: {
           humanReview: requiredValue(env, "HUMAN_REVIEW_LABEL"),
@@ -154,17 +160,31 @@ function readCsv(env: ConfigEnvSource, key: ConfigKey): readonly string[] {
     .filter((entry) => entry.length > 0);
 }
 
-function readOptionalCsv(env: ConfigEnvSource, key: string): readonly string[] {
-  const value = env[key]?.trim();
+function readOptionalAllowlist(
+  env: ConfigEnvSource,
+  key: OptionalConfigKey,
+  invalidValues: InvalidConfigValue[]
+): readonly string[] | undefined {
+  const raw = env[key];
 
-  if (value === undefined || value.length === 0) {
+  // Unset or empty/whitespace-only: intentional repo-agnostic scope.
+  if (raw === undefined || raw.trim().length === 0) {
     return [];
   }
 
-  return value
+  // Present and non-empty but no valid entries (e.g. ",," or " , "): the operator
+  // tried to restrict scope — fail closed instead of silently allowing all repos.
+  const entries = raw
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
+
+  if (entries.length === 0) {
+    invalidValues.push({ key, reason: "is set but lists no valid owner/repo entries" });
+    return undefined;
+  }
+
+  return entries;
 }
 
 function readNonEmptyCsv(
