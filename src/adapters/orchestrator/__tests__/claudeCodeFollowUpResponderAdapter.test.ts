@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import type { FollowUpResponse, FollowUpResponseRequest } from "../../../app/respondToReviewerMention.js";
+import { resetLogSink, setLogSink } from "../../../shared/log.js";
 import type { ModelEgressGuard, ModelEgressSession } from "../../network/modelEgressGuard.js";
 import type { CommandInvocation, CommandRunner } from "../../workspace/commandRunner.js";
 import {
@@ -53,6 +54,14 @@ function createGuard(calls: string[], env: Readonly<Record<string, string>> = {}
     }
   };
 }
+
+beforeEach(() => {
+  setLogSink(() => undefined);
+});
+
+afterEach(() => {
+  resetLogSink();
+});
 
 describe("createClaudeCodeFollowUpResponderAdapter", () => {
   it("runs Claude Code in a guarded replace-env session and parses analysis-only follow-up output", async () => {
@@ -158,6 +167,46 @@ describe("createClaudeCodeFollowUpResponderAdapter", () => {
         !error.message.includes("secret-token")
     );
     assert.deepEqual(calls, ["enter-egress", "run-command", "dispose-egress"]);
+  });
+
+  it("preserves the command failure when egress cleanup also fails", async () => {
+    const adapter = createClaudeCodeFollowUpResponderAdapter({
+      command: "claude",
+      commandRunner: {
+        async run() {
+          return {
+            exitCode: 2,
+            stdout: "",
+            stderr: "command failed with secret-token"
+          };
+        }
+      },
+      egressGuard: {
+        async enter() {
+          return {
+            env: {},
+            async dispose() {
+              throw new Error("dispose failed with secret-token");
+            }
+          };
+        }
+      },
+      baseEnv: {
+        PATH: "path-value",
+        GITHUB_TOKEN: "secret-token"
+      }
+    });
+
+    await assert.rejects(
+      () => adapter.generateFollowUpResponse(request),
+      (error) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /Claude Code follow-up responder command failed/u);
+        assert.doesNotMatch(error.message, /dispose failed/u);
+        assert.doesNotMatch(error.message, /secret-token/u);
+        return true;
+      }
+    );
   });
 
   it("rejects malformed, unsafe, or stale follow-up output", async () => {

@@ -10,6 +10,7 @@ import type {
 } from "../../app/respondToReviewerMention.js";
 import type { MergeSignal } from "../../domain/review/reviewSignal.js";
 import { getProcessEnvironment, type ConfigEnvSource } from "../../shared/config.js";
+import { log } from "../../shared/log.js";
 import type { ModelEgressGuard } from "../network/modelEgressGuard.js";
 import type { CommandRunner } from "../workspace/commandRunner.js";
 import { buildAgentEnvironment, isSecretEnvironmentKey } from "./agentEnvironment.js";
@@ -40,6 +41,8 @@ export function createClaudeCodeFollowUpResponderAdapter(
   return {
     async generateFollowUpResponse(request) {
       const session = await options.egressGuard.enter();
+      const sessionEnv = { ...baseEnv, ...session.env };
+      let hasPrimaryError = false;
 
       try {
         const result = await options.commandRunner.run({
@@ -55,17 +58,46 @@ export function createClaudeCodeFollowUpResponderAdapter(
           throw new Error(
             `Claude Code follow-up responder command failed with exit code ${result.exitCode}: ${sanitizeForAgentError(
               `${result.stderr}\n${result.stdout}`.trim(),
-              { ...baseEnv, ...session.env }
+              sessionEnv
             )}`
           );
         }
 
         return parseFollowUpResponseOutput(result.stdout, request);
+      } catch (error) {
+        hasPrimaryError = true;
+        throw error;
       } finally {
-        await session.dispose();
+        await disposeEgressSession({
+          session,
+          hasPrimaryError,
+          env: sessionEnv
+        });
       }
     }
   };
+}
+
+async function disposeEgressSession(input: {
+  readonly session: { dispose(): Promise<void> };
+  readonly hasPrimaryError: boolean;
+  readonly env: ConfigEnvSource;
+}): Promise<void> {
+  try {
+    await input.session.dispose();
+  } catch (error) {
+    const message = sanitizeForAgentError(error instanceof Error ? error.message : "unknown error", input.env);
+
+    if (input.hasPrimaryError) {
+      log("Claude Code follow-up responder egress cleanup failed", {
+        level: "error",
+        metadata: { message }
+      });
+      return;
+    }
+
+    throw new Error(`Claude Code follow-up responder egress cleanup failed: ${message}`);
+  }
 }
 
 function parseFollowUpResponseOutput(stdout: string, request: FollowUpResponseRequest): FollowUpResponse {
