@@ -10,6 +10,11 @@
     "clean": "node scripts/clean-dist.mjs",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "build": "npm run clean && node node_modules/typescript/bin/tsc -p tsconfig.json",
+    "start": "node --env-file=.env dist/server/cli.js",
+    "serve": "npm run build && npm start",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop code-reviewer-agent",
+    "pm2:logs": "pm2 logs code-reviewer-agent --lines 50 --nostream",
     "test": "node --test \"dist/**/*.test.js\"",
     "check": "npm run typecheck && npm run build && npm run test"
   },
@@ -23,5 +28,11 @@
   "devDependencies": {
     "@types/node": "24.12.4",
     "typescript": "5.8.3"
+  },
+  "dependencies": {
+    "pm2": "^7.0.1"
+  },
+  "overrides": {
+    "ws": "8.21.0"
   }
 }

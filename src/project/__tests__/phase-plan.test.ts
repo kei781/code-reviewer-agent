@@ -16,7 +16,7 @@ describe("implementation phase plan", () => {
   it("keeps phase identifiers unique and ordered", () => {
     const ids = implementationPhases.map((phase) => phase.id);
 
-    assert.deepEqual(ids, ["phase-0", "phase-1", "phase-2"]);
+    assert.deepEqual(ids, ["phase-0", "phase-1", "phase-2", "phase-3a"]);
     assert.equal(new Set(ids).size, ids.length);
   });
 
@@ -26,7 +26,8 @@ describe("implementation phase plan", () => {
       [
         ["phase-0", "implemented"],
         ["phase-1", "implemented"],
-        ["phase-2", "implemented"]
+        ["phase-2", "implemented"],
+        ["phase-3a", "implemented"]
       ]
     );
   });
@@ -138,10 +139,15 @@ describe("setup bootstrap", () => {
   it("provides Volta pins and a POSIX bootstrap that installs pinned Node before running setup", () => {
     const script = readFileSync("scripts/setup.sh", "utf8");
     const nodeSetupScript = readFileSync("scripts/setup.mjs", "utf8");
+    const ecosystemConfig = readFileSync("ecosystem.config.cjs", "utf8");
+    const serverCli = readFileSync("src/server/cli.ts", "utf8");
+    const serverMain = readFileSync("src/server/main.ts", "utf8");
     const gitignore = readFileSync(".gitignore", "utf8");
     const gitAttributes = readFileSync(".gitattributes", "utf8");
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      dependencies?: Record<string, string>;
       engines?: Record<string, string>;
+      overrides?: Record<string, string>;
       scripts?: Record<string, string>;
       volta?: Record<string, string>;
     };
@@ -156,7 +162,8 @@ describe("setup bootstrap", () => {
     assert.match(script, /\.tools\/node/u);
     assert.match(script, /scripts\/setup\.mjs/u);
     assert.match(nodeSetupScript, /readFileSync\("\.env\.example"/u);
-    assert.match(nodeSetupScript, /ensureFile\("\.env"/u);
+    assert.match(nodeSetupScript, /mergeEnvFile\("\.env", readFileSync\("\.env\.example"/u);
+    assert.doesNotMatch(nodeSetupScript, /ensureFile\("\.env", readFileSync\("\.env\.example"/u);
     assert.match(nodeSetupScript, /cleanDirectory\("dist"\)/u);
     assert.doesNotMatch(script, /\bsudo\b/u);
     assert.match(gitignore, /^\.tools\/$/mu);
@@ -165,7 +172,21 @@ describe("setup bootstrap", () => {
     assert.match(gitAttributes, /^scripts\/\*\.sh text eol=lf$/mu);
     assert.equal(packageJson.scripts?.clean, "node scripts/clean-dist.mjs");
     assert.match(packageJson.scripts?.build ?? "", /^npm run clean && /u);
+    assert.equal(packageJson.scripts?.start, "node --env-file=.env dist/server/cli.js");
+    assert.equal(packageJson.scripts?.serve, "npm run build && npm start");
+    assert.equal(packageJson.scripts?.["pm2:start"], "pm2 start ecosystem.config.cjs");
+    assert.equal(packageJson.scripts?.["pm2:stop"], "pm2 stop code-reviewer-agent");
+    assert.equal(packageJson.scripts?.["pm2:logs"], "pm2 logs code-reviewer-agent --lines 50 --nostream");
     assert.equal(packageJson.scripts?.["setup:sh"], "sh scripts/setup.sh");
+    assert.match(packageJson.dependencies?.pm2 ?? "", /^\^/u);
+    assert.equal(packageJson.overrides?.ws, "8.21.0");
+    assert.match(ecosystemConfig, /name: "code-reviewer-agent"/u);
+    assert.match(ecosystemConfig, /script: "dist\/server\/cli\.js"/u);
+    assert.match(ecosystemConfig, /interpreter: "node"/u);
+    assert.match(ecosystemConfig, /node_args: "--env-file=\.env"/u);
+    assert.match(serverCli, /import \{ main \} from "\.\/main\.js"/u);
+    assert.match(serverCli, /void main\(\)\.catch/u);
+    assert.doesNotMatch(serverMain, /pathToFileURL|isDirectExecution/u);
   });
 });
 
@@ -181,11 +202,14 @@ describe("directory rules", () => {
   it("documents the reusable module boundaries that future agents must preserve", () => {
     const domainRule = directoryRules.find((rule) => rule.path === "src/domain");
     const adapterRule = directoryRules.find((rule) => rule.path === "src/adapters");
+    const serverRule = directoryRules.find((rule) => rule.path === "src/server");
 
     assert.ok(domainRule);
     assert.ok(domainRule.mustNotContain.includes("GitHub SDK calls"));
     assert.ok(adapterRule);
     assert.ok(adapterRule.mustNotContain.includes("hidden reviewer context sharing"));
+    assert.ok(serverRule);
+    assert.ok(serverRule.mustNotContain.includes("reusable review policy"));
   });
 
   it("keeps app use cases independent from orchestration module types", () => {

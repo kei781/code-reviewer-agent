@@ -44,7 +44,7 @@ Security invariants:
 - `src/domain`: pure reusable business rules, policies, state machines, and typed contracts. No process env, filesystem, network, GitHub SDK, model SDK, or shell execution.
 - `src/app`: orchestration use cases that coordinate domain rules and ports. May depend on `src/domain` and `src/shared`, but not concrete adapters directly unless injected through ports.
 - `src/adapters`: concrete integrations for GitHub, model providers, file artifacts, command execution, and runtime surfaces. May implement ports declared by app/domain modules.
-- `src/server`: planned Phase 3 process entrypoint and HTTP route layer. Keep it thin; delegate GitHub, git, state, and model execution to adapters.
+- `src/server`: Phase 3 process entrypoint and HTTP route layer. Keep it thin; delegate GitHub, git, state, and model execution to adapters.
 - `src/shared`: generic utilities and central runtime config. Avoid dumping business logic here.
 - `src/project`: repository-local constants, phase planning metadata, and human-readable implementation maps derived from the root ADR/PRD.
 - `docs`: implementation plans, architecture notes, and operational runbooks.

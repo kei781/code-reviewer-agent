@@ -113,3 +113,22 @@ export type {
   ReviewerMentionPorts,
   ReviewerTriggerAlias
 } from "./app/respondToReviewerMention.js";
+
+export { verifyGitHubWebhookSignature } from "./adapters/github/webhookSignature.js";
+export type { GitHubWebhookSignatureInput } from "./adapters/github/webhookSignature.js";
+export {
+  readPayloadAction,
+  readRepositoryFullName,
+  recognizeGitHubWebhookDelivery
+} from "./adapters/github/webhookRecognition.js";
+export type {
+  RecognizedWebhookDelivery,
+  RecognizedWebhookEventName,
+  WebhookRecognitionResult,
+  WebhookSkipReason
+} from "./adapters/github/webhookRecognition.js";
+
+export { createReviewHttpServer } from "./server/httpServer.js";
+export type { ReviewHttpServerOptions } from "./server/httpServer.js";
+export { closeReviewServer, createRuntimeServer, summarizeConfigFailure } from "./server/main.js";
+export type { ConfigFailureSummary } from "./server/main.js";

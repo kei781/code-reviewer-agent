@@ -37,6 +37,12 @@ export const directoryRules = [
     mustNotContain: ["direct shell execution", "GitHub SDK calls", "model SDK calls", "secret reads"]
   },
   {
+    path: "src/server",
+    purpose: "Process entrypoint and thin HTTP route layer for the self-hosted webhook runtime.",
+    mayDependOn: ["src/app", "src/adapters", "src/shared"],
+    mustNotContain: ["reusable review policy", "direct model execution", "direct GitHub SDK calls", "branch-protection bypass logic"]
+  },
+  {
     path: "src/shared",
     purpose: "Project-agnostic utility helpers such as logging.",
     mayDependOn: [],

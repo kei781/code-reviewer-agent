@@ -48,6 +48,51 @@ function ensureFile(path, content) {
   log("Created file", { path });
 }
 
+function mergeEnvFile(path, exampleContent) {
+  if (!existsSync(path)) {
+    writeFileSync(path, exampleContent);
+    log("Created file", { path });
+    return;
+  }
+
+  const currentContent = readFileSync(path, "utf8");
+  const currentKeys = readEnvAssignmentKeys(currentContent);
+  const missingAssignments = readEnvAssignments(exampleContent).filter((assignment) => !currentKeys.has(assignment.key));
+
+  if (missingAssignments.length === 0) {
+    log("Kept existing file", { path });
+    return;
+  }
+
+  const prefix = currentContent.endsWith("\n") ? currentContent : `${currentContent}\n`;
+  const addition = [
+    "",
+    "# Added by setup from .env.example",
+    ...missingAssignments.map((assignment) => assignment.line),
+    ""
+  ].join("\n");
+
+  writeFileSync(path, `${prefix}${addition}`);
+  log("Updated file with missing env keys", {
+    path,
+    addedKeys: missingAssignments.map((assignment) => assignment.key)
+  });
+}
+
+function readEnvAssignmentKeys(content) {
+  return new Set(readEnvAssignments(content).map((assignment) => assignment.key));
+}
+
+function readEnvAssignments(content) {
+  return content
+    .split(/\r?\n/u)
+    .map((line) => {
+      const match = /^([A-Z][A-Z0-9_]*)=/u.exec(line);
+      return match === null ? undefined : { key: match[1], line };
+    })
+    .filter((assignment) => assignment !== undefined);
+}
+
 function cleanDirectory(path) {
   if (!existsSync(path)) {
     log("Skipped missing directory", { path });
@@ -91,6 +136,7 @@ const requiredDirectories = [
   "src/domain",
   "src/orchestration",
   "src/project",
+  "src/server",
   "src/shared"
 ];
 
@@ -108,7 +154,7 @@ ensureFile(
   ].join("\n")
 );
 
-ensureFile(".env", readFileSync(".env.example", "utf8"));
+mergeEnvFile(".env", readFileSync(".env.example", "utf8"));
 
 runNpm(["install"]);
 cleanDirectory("dist");

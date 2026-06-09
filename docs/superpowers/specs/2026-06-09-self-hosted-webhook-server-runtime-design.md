@@ -55,8 +55,7 @@ Trade-off: avoids adding runtime code here, but splits config, phase ownership, 
 
 ```text
 pm2
-`-- npm start
-    `-- node dist/server/main.js
+`-- node --env-file=.env dist/server/cli.js
         |-- shared/config.ts
         |-- server/httpServer.ts
         |-- adapters/github/*
@@ -68,6 +67,7 @@ pm2
 
 ### Runtime Modules
 
+- `src/server/cli.ts`
 - `src/server/main.ts`
   - Process entrypoint.
   - Loads typed config.
@@ -120,13 +120,13 @@ pm2
   - Fails closed when the allowlist is empty, malformed, or cannot be enforced.
 
 - `ecosystem.config.cjs`
-  - pm2 process definition for `npm start` or `node dist/server/main.js`.
+  - pm2 process definition for `node --env-file=.env dist/server/cli.js`.
   - Uses environment variables supplied outside source control.
 
 ## Runtime Flow
 
-1. pm2 starts `npm start`.
-2. `src/server/main.ts` loads config through `loadConfig()`.
+1. pm2 starts `dist/server/cli.js` with Node 24 `--env-file=.env`.
+2. `src/server/cli.ts` calls `main()`, and `src/server/main.ts` loads config through `loadConfig()`.
 3. The HTTP server listens on `REVIEW_SERVER_HOST` and `REVIEW_SERVER_PORT`.
 4. `GET /healthz` returns `200` with basic status.
 5. GitHub sends a webhook to `POST /webhooks/github`.
@@ -148,6 +148,7 @@ Intent: make the repository pm2-runnable without pretending the full review pipe
 
 Deliverables:
 
+- `src/server/cli.ts`
 - `src/server/main.ts`
 - `src/server/httpServer.ts`
 - `GET /healthz`
@@ -158,7 +159,7 @@ Deliverables:
 Exit criteria:
 
 - `npm run check` passes.
-- `npm start` runs `dist/server/main.js` after build.
+- `npm start` runs `dist/server/cli.js` with Node 24 `--env-file=.env` after build.
 - pm2 can start the process and hit `/healthz`.
 - Webhook delivery with invalid signature is rejected before JSON parsing.
 - Supported GitHub events can be recognized and logged, even if later adapters are still stubbed for Phase 3A.
@@ -272,7 +273,7 @@ Optional current keys:
 
 - Phase 3A returns `202 Accepted` after raw-body capture, signature verification, event classification, repo allowlist checks, and a logged recognized-event record. It does not invoke the full review use cases until the concrete GitHub, workspace, state, and orchestrator adapters exist in Phase 3B and Phase 3C.
 - Phase 3B uses Node 24 `node:sqlite` behind a `ReviewStateStore` adapter because the pinned local runtime provides it. The adapter must keep SQLite APIs out of `src/domain` and `src/app`, so a later move to an external SQLite package only changes `src/adapters/state`.
-- pm2 runs `npm start`. `npm start` runs the built `dist/server/main.js`; `npm run serve` builds first and then delegates to `npm start`. The pm2 ecosystem file reads environment from the deployment process and never stores secrets in source control.
+- pm2 runs the built `dist/server/cli.js` directly with Node 24 `--env-file=.env`. `npm start` uses the same Node command, and `npm run serve` builds first and then delegates to `npm start`. The pm2 ecosystem file does not store secrets.
 
 ## Success Criteria
 
