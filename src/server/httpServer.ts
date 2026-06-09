@@ -60,7 +60,10 @@ async function handleGitHubWebhook(
   const rawBodyResult = await readRawBody(request, maxBodyBytes);
 
   if (rawBodyResult.status === "too-large") {
-    sendJson(response, 413, { status: "rejected", reason: "body-too-large" });
+    response.shouldKeepAlive = false;
+    sendJson(response, 413, { status: "rejected", reason: "body-too-large" }, () => {
+      request.destroy();
+    });
     return;
   }
 
@@ -124,28 +127,55 @@ function readRawBody(request: IncomingMessage, maxBodyBytes: number): Promise<Ra
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let receivedBytes = 0;
-    let isTooLarge = false;
+    let isSettled = false;
 
-    request.on("data", (chunk: Buffer | string) => {
+    const settle = (result: RawBodyResult): void => {
+      if (isSettled) {
+        return;
+      }
+
+      isSettled = true;
+      request.off("data", onData);
+      request.off("end", onEnd);
+      resolve(result);
+    };
+
+    const fail = (error: Error): void => {
+      if (isSettled) {
+        return;
+      }
+
+      isSettled = true;
+      request.off("data", onData);
+      request.off("end", onEnd);
+      request.off("error", onError);
+      reject(error);
+    };
+
+    const onData = (chunk: Buffer | string): void => {
       const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
       receivedBytes += buffer.length;
 
       if (receivedBytes > maxBodyBytes) {
-        isTooLarge = true;
+        request.pause();
+        settle({ status: "too-large" });
         return;
       }
 
       chunks.push(buffer);
-    });
-    request.on("end", () => {
-      if (isTooLarge) {
-        resolve({ status: "too-large" });
-        return;
-      }
+    };
 
-      resolve({ status: "ok", rawBody: Buffer.concat(chunks) });
-    });
-    request.on("error", reject);
+    const onEnd = (): void => {
+      settle({ status: "ok", rawBody: Buffer.concat(chunks) });
+    };
+
+    const onError = (error: Error): void => {
+      fail(error);
+    };
+
+    request.on("data", onData);
+    request.on("end", onEnd);
+    request.on("error", onError);
   });
 }
 
@@ -173,11 +203,17 @@ function readSingleHeader(headers: IncomingHttpHeaders, name: string): string | 
   return value;
 }
 
-function sendJson(response: ServerResponse, statusCode: number, body: Readonly<Record<string, unknown>>): void {
+function sendJson(
+  response: ServerResponse,
+  statusCode: number,
+  body: Readonly<Record<string, unknown>>,
+  onFinished?: () => void
+): void {
   if (response.headersSent) {
+    onFinished?.();
     return;
   }
 
   response.writeHead(statusCode, { "Content-Type": "application/json" });
-  response.end(JSON.stringify(body));
+  response.end(JSON.stringify(body), onFinished);
 }

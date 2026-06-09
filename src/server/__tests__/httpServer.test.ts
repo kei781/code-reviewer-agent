@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { once } from "node:events";
 import type { Server } from "node:http";
+import { createConnection, type Socket } from "node:net";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { resetLogSink, setLogSink } from "../../shared/log.js";
 import { createReviewHttpServer, type RecognizedWebhookDelivery } from "../httpServer.js";
@@ -165,6 +166,37 @@ describe("createReviewHttpServer", () => {
     assert.deepEqual(await response.json(), { status: "rejected", reason: "body-too-large" });
   });
 
+  it("stops reading an oversized webhook stream as soon as the limit is crossed", async () => {
+    const { port } = await listen(createReviewHttpServer({ webhookSecret, maxBodyBytes: 10 }));
+    const socket = createConnection({ host: "127.0.0.1", port });
+    socket.on("error", () => undefined);
+
+    try {
+      await once(socket, "connect");
+      socket.write(
+        [
+          "POST /webhooks/github HTTP/1.1",
+          "Host: 127.0.0.1",
+          "Content-Type: application/json",
+          "Content-Length: 1000000",
+          "X-GitHub-Delivery: delivery-oversized-stream",
+          "X-GitHub-Event: pull_request",
+          `X-Hub-Signature-256: sha256=${"0".repeat(64)}`,
+          "",
+          "12345678901"
+        ].join("\r\n")
+      );
+
+      const responseText = await waitForSocketText(socket, (text) => text.includes("\r\n\r\n"));
+
+      assert.match(responseText, /^HTTP\/1\.1 413 /u);
+      assert.match(responseText, /\r\nConnection: close\r\n/iu);
+      await waitForSocketClose(socket);
+    } finally {
+      socket.destroy();
+    }
+  });
+
   it("rejects malformed JSON after a valid signature", async () => {
     const { baseUrl } = await listen(createReviewHttpServer({ webhookSecret }));
     const body = "{";
@@ -180,7 +212,7 @@ describe("createReviewHttpServer", () => {
   });
 });
 
-async function listen(server: Server): Promise<{ readonly baseUrl: string }> {
+async function listen(server: Server): Promise<{ readonly baseUrl: string; readonly port: number }> {
   servers.push(server);
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -188,7 +220,7 @@ async function listen(server: Server): Promise<{ readonly baseUrl: string }> {
 
   assert.ok(address !== null && typeof address === "object");
 
-  return { baseUrl: `http://127.0.0.1:${address.port}` };
+  return { baseUrl: `http://127.0.0.1:${address.port}`, port: address.port };
 }
 
 function signedHeaders(eventName: string, deliveryId: string, body: string): HeadersInit {
@@ -198,4 +230,72 @@ function signedHeaders(eventName: string, deliveryId: string, body: string): Hea
     "X-GitHub-Event": eventName,
     "X-Hub-Signature-256": `sha256=${createHmac("sha256", webhookSecret).update(body).digest("hex")}`
   };
+}
+
+function waitForSocketText(
+  socket: Socket,
+  predicate: (text: string) => boolean,
+  timeoutMs = 500
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let text = "";
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Timed out waiting for socket response. Received: ${JSON.stringify(text)}`));
+    }, timeoutMs);
+
+    const cleanup = (): void => {
+      clearTimeout(timeout);
+      socket.off("data", onData);
+      socket.off("close", onClose);
+    };
+
+    const onData = (chunk: Buffer): void => {
+      text += chunk.toString("utf8");
+
+      if (predicate(text)) {
+        cleanup();
+        resolve(text);
+      }
+    };
+
+    const onClose = (): void => {
+      cleanup();
+
+      if (predicate(text)) {
+        resolve(text);
+        return;
+      }
+
+      reject(new Error(`Socket closed before expected response. Received: ${JSON.stringify(text)}`));
+    };
+
+    socket.on("data", onData);
+    socket.on("close", onClose);
+  });
+}
+
+function waitForSocketClose(socket: Socket, timeoutMs = 500): Promise<void> {
+  if (socket.destroyed) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for socket close"));
+    }, timeoutMs);
+
+    const cleanup = (): void => {
+      clearTimeout(timeout);
+      socket.off("close", onClose);
+    };
+
+    const onClose = (): void => {
+      cleanup();
+      resolve();
+    };
+
+    socket.on("close", onClose);
+  });
 }
