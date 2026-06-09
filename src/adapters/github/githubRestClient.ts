@@ -1,5 +1,6 @@
 import type { GitHubAppInstallationTokenClient } from "./githubAppInstallationToken.js";
 import type { GitHubReviewClient } from "./githubReviewPublisher.js";
+import type { GitHubPullRequestMetadata } from "./webhookEventMapper.js";
 
 export type GitHubFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -9,7 +10,18 @@ export interface GitHubRestClientOptions {
   readonly userAgent?: string;
 }
 
-export type GitHubRestClient = GitHubAppInstallationTokenClient & GitHubReviewClient;
+export interface GitHubPullRequestReadInput {
+  readonly token: string;
+  readonly repositoryFullName: string;
+  readonly pullRequestNumber: number;
+}
+
+export interface GitHubPullRequestReadClient {
+  listPullRequestChangedPaths(input: GitHubPullRequestReadInput): Promise<readonly string[]>;
+  getPullRequestMetadata(input: GitHubPullRequestReadInput): Promise<GitHubPullRequestMetadata>;
+}
+
+export type GitHubRestClient = GitHubAppInstallationTokenClient & GitHubReviewClient & GitHubPullRequestReadClient;
 
 const defaultGitHubApiBaseUrl = "https://api.github.com";
 const defaultUserAgent = "code-reviewer-agent";
@@ -93,6 +105,40 @@ export function createGitHubRestClient(options: GitHubRestClientOptions = {}): G
           labels: input.labels
         }
       });
+    },
+    async listPullRequestChangedPaths(input) {
+      assertPositivePullRequestNumber(input.pullRequestNumber);
+      const paths: string[] = [];
+      let page = 1;
+      let hasNextPage = true;
+
+      while (hasNextPage) {
+        const response = await requestJsonWithHeaders(fetchImpl, {
+          baseUrl,
+          userAgent,
+          route: `/repos/${encodeRepositoryFullName(input.repositoryFullName)}/pulls/${input.pullRequestNumber}/files?per_page=100&page=${page}`,
+          method: "GET",
+          token: input.token
+        });
+
+        paths.push(...readPullRequestFileNames(response.json));
+        hasNextPage = hasNextLink(response.headers);
+        page += 1;
+      }
+
+      return paths;
+    },
+    async getPullRequestMetadata(input) {
+      assertPositivePullRequestNumber(input.pullRequestNumber);
+      const json = await requestJson(fetchImpl, {
+        baseUrl,
+        userAgent,
+        route: `/repos/${encodeRepositoryFullName(input.repositoryFullName)}/pulls/${input.pullRequestNumber}`,
+        method: "GET",
+        token: input.token
+      });
+
+      return readPullRequestMetadata(json);
     }
   };
 }
@@ -107,6 +153,15 @@ interface GitHubRequestInput {
 }
 
 async function requestJson(fetchImpl: GitHubFetch, input: GitHubRequestInput): Promise<unknown> {
+  return (await requestJsonWithHeaders(fetchImpl, input)).json;
+}
+
+interface GitHubJsonResponse {
+  readonly json: unknown;
+  readonly headers: Headers;
+}
+
+async function requestJsonWithHeaders(fetchImpl: GitHubFetch, input: GitHubRequestInput): Promise<GitHubJsonResponse> {
   const headers: Record<string, string> = {
     accept: "application/vnd.github+json",
     authorization: `Bearer ${input.token}`,
@@ -130,10 +185,13 @@ async function requestJson(fetchImpl: GitHubFetch, input: GitHubRequestInput): P
   }
 
   if (response.status === 204) {
-    return {};
+    return { json: {}, headers: response.headers };
   }
 
-  return response.json() as Promise<unknown>;
+  return {
+    json: await response.json(),
+    headers: response.headers
+  };
 }
 
 function encodeRepositoryFullName(repositoryFullName: string): string {
@@ -150,6 +208,62 @@ function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/u, "");
 }
 
+function assertPositivePullRequestNumber(pullRequestNumber: number): void {
+  if (!Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) {
+    throw new Error("Pull request number must be a positive integer");
+  }
+}
+
+function readPullRequestFileNames(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) {
+    throw new Error("GitHub pull request files response must be an array");
+  }
+
+  return value.map((file) => {
+    const filename = readStringField(file, "filename");
+
+    if (filename === undefined) {
+      throw new Error("GitHub pull request files response included a file without filename");
+    }
+
+    return filename;
+  });
+}
+
+function readPullRequestMetadata(value: unknown): GitHubPullRequestMetadata {
+  const state = readStringField(value, "state");
+  const head = readRecordField(value, "head");
+  const base = readRecordField(value, "base");
+  const headSha = readStringField(head, "sha");
+  const headRepo = readRecordField(head, "repo");
+  const baseRepo = readRecordField(base, "repo");
+  const headRepositoryFullName = readStringField(headRepo, "full_name");
+  const baseRepositoryFullName = readStringField(baseRepo, "full_name");
+  const headRepositoryFork = readBooleanField(headRepo, "fork");
+
+  if (
+    state === undefined ||
+    headSha === undefined ||
+    headRepositoryFullName === undefined ||
+    baseRepositoryFullName === undefined ||
+    headRepositoryFork === undefined
+  ) {
+    throw new Error("GitHub pull request metadata response was missing required fields");
+  }
+
+  return {
+    headSha,
+    isClosed: state === "closed",
+    isFork: headRepositoryFork || headRepositoryFullName !== baseRepositoryFullName
+  };
+}
+
+function hasNextLink(headers: Headers): boolean {
+  const linkHeader = headers.get("link");
+
+  return linkHeader?.split(",").some((link) => /\brel="next"/u.test(link)) ?? false;
+}
+
 function readNumberField(value: unknown, key: string): number | undefined {
   const field = readField(value, key);
 
@@ -160,6 +274,18 @@ function readStringField(value: unknown, key: string): string | undefined {
   const field = readField(value, key);
 
   return typeof field === "string" && field.length > 0 ? field : undefined;
+}
+
+function readBooleanField(value: unknown, key: string): boolean | undefined {
+  const field = readField(value, key);
+
+  return typeof field === "boolean" ? field : undefined;
+}
+
+function readRecordField(value: unknown, key: string): Record<string, unknown> {
+  const field = readField(value, key);
+
+  return typeof field === "object" && field !== null && !Array.isArray(field) ? field as Record<string, unknown> : {};
 }
 
 function readField(value: unknown, key: string): unknown {

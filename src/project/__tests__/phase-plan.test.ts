@@ -16,7 +16,7 @@ describe("implementation phase plan", () => {
   it("keeps phase identifiers unique and ordered", () => {
     const ids = implementationPhases.map((phase) => phase.id);
 
-    assert.deepEqual(ids, ["phase-0", "phase-1", "phase-2", "phase-3a", "phase-3b", "phase-3c"]);
+    assert.deepEqual(ids, ["phase-0", "phase-1", "phase-2", "phase-3a", "phase-3b", "phase-3c", "phase-3d"]);
     assert.equal(new Set(ids).size, ids.length);
   });
 
@@ -29,7 +29,8 @@ describe("implementation phase plan", () => {
         ["phase-2", "implemented"],
         ["phase-3a", "implemented"],
         ["phase-3b", "implemented"],
-        ["phase-3c", "implemented"]
+        ["phase-3c", "implemented"],
+        ["phase-3d", "implemented"]
       ]
     );
   });

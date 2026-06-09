@@ -2,7 +2,7 @@
 
 ## Status
 
-Runtime design record. Phase 3A added the listening server and pm2 entrypoint, Phase 3B added GitHub/workspace/state adapters, and Phase 3C added the guarded Claude Code orchestration adapter. Final dispatch wiring from recognized webhooks into the app use cases remains the next runtime integration step.
+Runtime design record. Phase 3A added the listening server and pm2 entrypoint, Phase 3B added GitHub/workspace/state adapters, Phase 3C added the guarded Claude Code orchestration adapter, and Phase 3D added dispatch wiring from recognized webhooks into the app use cases.
 
 ## Intent
 
@@ -71,7 +71,7 @@ pm2
 - `src/server/main.ts`
   - Process entrypoint.
   - Loads typed config.
-  - Builds concrete adapters once final dispatch wiring is implemented.
+  - Exposes a dispatcher hook for wiring concrete runtime adapters.
   - Starts the HTTP server.
   - Handles `SIGINT` and `SIGTERM` by closing the server and logging shutdown.
 
@@ -188,7 +188,7 @@ Exit criteria:
 
 Intent: run the local Claude Code orchestrator as the concrete review engine.
 
-Status: implemented as the adapter and safety boundary layer. The remaining integration work is connecting recognized webhook deliveries to app use cases with the concrete adapters.
+Status: implemented as the adapter and safety boundary layer. Phase 3D connects recognized webhook deliveries to app use cases through explicit dispatcher ports.
 
 Deliverables:
 

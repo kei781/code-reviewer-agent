@@ -112,6 +112,110 @@ describe("createGitHubRestClient", () => {
     assert.deepEqual(calls[2]?.body, { labels: ["security-sensitive"] });
   });
 
+  it("reads pull request changed paths and metadata with installation tokens", async () => {
+    const calls: RecordedFetch[] = [];
+    const client = createGitHubRestClient({
+      baseUrl: "https://api.github.test",
+      fetch: async (url, init) => {
+        calls.push({
+          url: String(url),
+          method: init.method ?? "GET",
+          authorization: new Headers(init.headers).get("authorization")
+        });
+
+        if (String(url).endsWith("/repos/kei781/sql-agent/pulls/42/files?per_page=100&page=1")) {
+          return new Response(JSON.stringify([{ filename: "src/server.ts" }]), {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              link: '<https://api.github.test/repos/kei781/sql-agent/pulls/42/files?per_page=100&page=2>; rel="next"'
+            }
+          });
+        }
+
+        if (String(url).endsWith("/repos/kei781/sql-agent/pulls/42/files?per_page=100&page=2")) {
+          return createJsonResponse([{ filename: "README.md" }]);
+        }
+
+        return createJsonResponse({
+          state: "closed",
+          head: {
+            sha: "abc123",
+            repo: {
+              full_name: "someone/sql-agent",
+              fork: true
+            }
+          },
+          base: {
+            repo: {
+              full_name: "kei781/sql-agent"
+            }
+          }
+        });
+      }
+    });
+
+    assert.deepEqual(
+      await client.listPullRequestChangedPaths({
+        token: "installation-token",
+        repositoryFullName: "kei781/sql-agent",
+        pullRequestNumber: 42
+      }),
+      ["src/server.ts", "README.md"]
+    );
+    assert.deepEqual(
+      await client.getPullRequestMetadata({
+        token: "installation-token",
+        repositoryFullName: "kei781/sql-agent",
+        pullRequestNumber: 42
+      }),
+      {
+        headSha: "abc123",
+        isClosed: true,
+        isFork: true
+      }
+    );
+
+    assert.deepEqual(calls.map((call) => [call.method, call.url, call.authorization]), [
+      [
+        "GET",
+        "https://api.github.test/repos/kei781/sql-agent/pulls/42/files?per_page=100&page=1",
+        "Bearer installation-token"
+      ],
+      [
+        "GET",
+        "https://api.github.test/repos/kei781/sql-agent/pulls/42/files?per_page=100&page=2",
+        "Bearer installation-token"
+      ],
+      ["GET", "https://api.github.test/repos/kei781/sql-agent/pulls/42", "Bearer installation-token"]
+    ]);
+  });
+
+  it("fails closed for malformed repository names in read-only pull request calls", async () => {
+    const client = createGitHubRestClient({
+      fetch: async () => createJsonResponse({ ok: true })
+    });
+
+    await assert.rejects(
+      () =>
+        client.listPullRequestChangedPaths({
+          token: "installation-token",
+          repositoryFullName: "owner/repo/extra",
+          pullRequestNumber: 42
+        }),
+      /owner\/repo/u
+    );
+    await assert.rejects(
+      () =>
+        client.getPullRequestMetadata({
+          token: "installation-token",
+          repositoryFullName: "owner",
+          pullRequestNumber: 42
+        }),
+      /owner\/repo/u
+    );
+  });
+
   it("throws sanitized errors for failed GitHub API responses", async () => {
     const client = createGitHubRestClient({
       baseUrl: "https://api.github.test",
