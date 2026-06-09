@@ -1,4 +1,4 @@
-export type PhaseId = "phase-0" | "phase-1" | "phase-2";
+export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3a";
 
 export type PhaseStatus = "implemented" | "implementing" | "blocked-until-pr-comments-resolved" | "planned";
 
@@ -50,6 +50,21 @@ export const implementationPhases = [
     sourceRequirement: "ADR/PRD explicit reviewer follow-up requirement",
     status: "implemented",
     deliverables: ["Mention parser", "Follow-up response contract", "SHA-aware dedupe tests", "Human handoff boundary"],
+  },
+  {
+    id: "phase-3a",
+    title: "Bootable self-hosted webhook server runtime",
+    description:
+      "Add the pm2-runnable Node.js HTTP entrypoint, health route, signed GitHub webhook intake, and startup scripts without wiring concrete review adapters yet.",
+    sourceRequirement: "Phase 3A in docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md",
+    status: "implemented",
+    deliverables: [
+      "Node HTTP server entrypoint",
+      "GET /healthz route",
+      "POST /webhooks/github route with raw-body signature verification",
+      "Phase 3A event recognition and safe 202 acknowledgement",
+      "npm start, npm run serve, and pm2 ecosystem config",
+    ],
   },
 ] as const satisfies readonly PhaseDefinition[];
 

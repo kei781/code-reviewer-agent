@@ -16,7 +16,7 @@ This repository is split by responsibility so each module can be reused by a fut
 |   |-- app/
 |   |-- adapters/
 |   |-- agents/
-|   |-- server/        # planned Phase 3 HTTP entrypoint and route layer
+|   |-- server/        # Phase 3 HTTP entrypoint and route layer
 |   |-- orchestration/
 |   |-- shared/
 |   `-- project/
@@ -43,7 +43,7 @@ Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToR
 
 The active implementation stops there. After review comments are posted, a human maintainer decides whether to resolve them or request additional development.
 
-Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. It adds a planned `src/server` layer for the process entrypoint and HTTP route handling. Concrete GitHub, git, state, and Claude Code effects still belong in `src/adapters`, and reusable review decisions stay in `src/domain` and `src/app`.
+Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. Phase 3A adds the `src/server` process entrypoint and HTTP route handling. Concrete GitHub publication, git workspace, state, and Claude Code execution effects still belong in `src/adapters`, and reusable review decisions stay in `src/domain` and `src/app`.
 
 ## Dependency Rules
 

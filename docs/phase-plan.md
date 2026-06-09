@@ -58,28 +58,28 @@ Exit criteria:
 
 ## Phase 3: Self-hosted Webhook Server Runtime
 
-Status: planned by `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`.
+Status: Phase 3A implemented; Phase 3B and Phase 3C remain planned by `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`.
 
 Goal: turn the reusable TypeScript review-server modules into a pm2-runnable self-hosted HTTP runtime.
 
 Deliverables:
 
-- Node.js server entrypoint with `GET /healthz` and `POST /webhooks/github`.
-- GitHub webhook signature verification before JSON parsing.
-- Runtime route mapping for supported `pull_request` and `issue_comment` events.
+- Node.js server entrypoint with `GET /healthz` and `POST /webhooks/github`. Implemented in Phase 3A.
+- GitHub webhook signature verification before JSON parsing. Implemented in Phase 3A.
+- Runtime recognition for supported `pull_request` and `issue_comment` events. Implemented in Phase 3A as safe acknowledgement and logging.
 - Concrete GitHub, git workspace, state store, and Claude Code orchestrator adapters behind existing app ports.
-- `npm start`, `npm run serve`, and pm2 ecosystem configuration.
-- Operational runbook for local startup, webhook configuration, and shutdown.
+- `npm start`, `npm run serve`, and pm2 ecosystem configuration. Implemented in Phase 3A.
+- Operational runbook for local startup, webhook configuration, and shutdown. Implemented in Phase 3A.
 
 Exit criteria:
 
 - pm2 can keep the built server process alive.
 - `/healthz` reports healthy status.
 - Invalid webhook signatures are rejected without side effects.
-- Supported webhook events reach the existing app use cases through injected adapters.
+- Phase 3A recognizes supported webhook events and returns a safe acknowledgement; Phase 3B/3C will route them through injected app adapters.
 - GitHub credentials remain server-side and are never injected into agent sessions.
 - The runtime remains review-only and human-gated.
 
 ## Completion Boundary
 
-The implemented source modules currently cover Phase 0 through Phase 2. Phase 3 is the next planned runtime phase and is intentionally split into design, server boot, concrete adapters, and Claude Code orchestration implementation PRs. After review comments are posted, a human maintainer still decides whether to resolve them, request additional development, or start a separate human-directed implementation task.
+The implemented source modules currently cover Phase 0 through Phase 2 plus Phase 3A server boot. The remaining Phase 3 work is intentionally split into concrete GitHub/workspace/state adapters and Claude Code orchestration implementation PRs. After review comments are posted, a human maintainer still decides whether to resolve them, request additional development, or start a separate human-directed implementation task.
