@@ -43,7 +43,7 @@ Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToR
 
 The active implementation stops there. After review comments are posted, a human maintainer decides whether to resolve them or request additional development.
 
-Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. Phase 3A adds the `src/server` process entrypoint and HTTP route handling. Concrete GitHub publication, git workspace, state, and Claude Code execution effects still belong in `src/adapters`, and reusable review decisions stay in `src/domain` and `src/app`.
+Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. Phase 3A adds the `src/server` process entrypoint and HTTP route handling. Phase 3B adds concrete GitHub payload mapping, GitHub App token/publication, git workspace, and SQLite state store adapters under `src/adapters`. Claude Code execution, egress guarding, agent environment scrubbing, and final dispatch wiring remain Phase 3C work. Reusable review decisions stay in `src/domain` and `src/app`.
 
 ## Dependency Rules
 

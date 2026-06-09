@@ -175,6 +175,18 @@ describe("runEnsembleReview", () => {
     assert.equal(calls.publishSkip.length, 1);
   });
 
+  it("skips empty changed paths before claiming a review", async () => {
+    const { ports, calls } = createPorts();
+
+    const result = await runEnsembleReview(baseWebhookEvent({ changedPaths: [] }), ports);
+
+    assert.deepEqual(result, { status: "skipped", reason: "invalid-payload" });
+    assert.equal(calls.claimReview.length, 0);
+    assert.equal(calls.prepareWorkspace.length, 0);
+    assert.equal(calls.runIndependentReviews.length, 0);
+    assert.equal(calls.publishSkip.length, 1);
+  });
+
   it("skips draft PRs before claiming a review", async () => {
     const { ports, calls } = createPorts();
 
