@@ -44,6 +44,11 @@ export { codexReviewerAgent } from "./agents/codexReviewer.js";
 export { buildOrchestratorHarness } from "./agents/orchestratorHarness.js";
 export { buildClaudeReviewerHarness } from "./agents/claudeReviewerHarness.js";
 export { buildCodexReviewerHarness } from "./agents/codexReviewerHarness.js";
+export {
+  buildFollowUpResponderHarness,
+  followUpResponseOutputEndMarker,
+  followUpResponseOutputStartMarker
+} from "./agents/followUpResponderHarness.js";
 
 export {
   buildReviewServerRunPlan,
@@ -162,9 +167,17 @@ export type {
 export { createGitHubRestClient } from "./adapters/github/githubRestClient.js";
 export type {
   GitHubFetch,
+  GitHubPullRequestReadClient,
+  GitHubPullRequestReadInput,
   GitHubRestClient,
   GitHubRestClientOptions
 } from "./adapters/github/githubRestClient.js";
+export { createGitHubPullRequestMetadataProvider } from "./adapters/github/githubPullRequestMetadataProvider.js";
+export type {
+  GitHubPullRequestMetadataProviderOptions,
+  PullRequestMetadataProvider,
+  PullRequestMetadataRequest
+} from "./adapters/github/githubPullRequestMetadataProvider.js";
 export { createNodeCommandRunner } from "./adapters/workspace/commandRunner.js";
 export type {
   CommandProcessSpawner,
@@ -200,6 +213,10 @@ export {
   orchestratorOutputStartMarker
 } from "./adapters/orchestrator/claudeCodeOrchestratorAdapter.js";
 export type { ClaudeCodeOrchestratorAdapterOptions } from "./adapters/orchestrator/claudeCodeOrchestratorAdapter.js";
+export {
+  createClaudeCodeFollowUpResponderAdapter
+} from "./adapters/orchestrator/claudeCodeFollowUpResponderAdapter.js";
+export type { ClaudeCodeFollowUpResponderAdapterOptions } from "./adapters/orchestrator/claudeCodeFollowUpResponderAdapter.js";
 export { createSqliteReviewStateStore } from "./adapters/state/sqliteReviewStateStore.js";
 export type {
   SqliteReviewStateStore,
@@ -207,6 +224,13 @@ export type {
 } from "./adapters/state/sqliteReviewStateStore.js";
 
 export { createReviewHttpServer } from "./server/httpServer.js";
-export type { ReviewHttpServerOptions } from "./server/httpServer.js";
+export type { RecognizedWebhookHandlerInput, ReviewHttpServerOptions } from "./server/httpServer.js";
+export { createWebhookDispatcher } from "./server/webhookDispatcher.js";
+export type {
+  WebhookDispatcher,
+  WebhookDispatcherOptions,
+  WebhookDispatchResult,
+  WebhookDispatchSkipReason
+} from "./server/webhookDispatcher.js";
 export { closeReviewServer, createRuntimeServer, summarizeConfigFailure } from "./server/main.js";
-export type { ConfigFailureSummary } from "./server/main.js";
+export type { ConfigFailureSummary, RuntimeServerOptions } from "./server/main.js";

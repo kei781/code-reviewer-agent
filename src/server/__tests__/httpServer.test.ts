@@ -48,8 +48,8 @@ describe("createReviewHttpServer", () => {
     const { baseUrl } = await listen(
       createReviewHttpServer({
         webhookSecret,
-        onRecognizedWebhook(delivery) {
-          recognized.push(delivery);
+        onRecognizedWebhook(input) {
+          recognized.push(input.delivery);
         }
       })
     );
@@ -75,8 +75,8 @@ describe("createReviewHttpServer", () => {
       createReviewHttpServer({
         webhookSecret,
         repoAllowlist: ["kei781/sql-agent"],
-        onRecognizedWebhook(delivery) {
-          recognized.push(delivery);
+        onRecognizedWebhook(input) {
+          recognized.push(input.delivery);
         }
       })
     );
@@ -106,14 +106,78 @@ describe("createReviewHttpServer", () => {
     ]);
   });
 
+  it("passes the parsed payload with recognized webhook metadata", async () => {
+    const recognized: Array<{
+      readonly delivery: RecognizedWebhookDelivery;
+      readonly payload: Record<string, unknown>;
+    }> = [];
+    const { baseUrl } = await listen(
+      createReviewHttpServer({
+        webhookSecret,
+        repoAllowlist: ["kei781/sql-agent"],
+        onRecognizedWebhook(input) {
+          recognized.push(input);
+        }
+      })
+    );
+    const payload = {
+      action: "opened",
+      repository: { full_name: "kei781/sql-agent" },
+      pull_request: { number: 42 }
+    };
+    const body = JSON.stringify(payload);
+
+    const response = await fetch(`${baseUrl}/webhooks/github`, {
+      method: "POST",
+      headers: signedHeaders("pull_request", "delivery-with-payload", body),
+      body
+    });
+
+    assert.equal(response.status, 202);
+    await waitFor(() => recognized.length === 1);
+    assert.deepEqual(recognized, [
+      {
+        delivery: {
+          deliveryId: "delivery-with-payload",
+          eventName: "pull_request",
+          action: "opened",
+          repositoryFullName: "kei781/sql-agent"
+        },
+        payload
+      }
+    ]);
+  });
+
+  it("acknowledges accepted webhooks without waiting for asynchronous dispatch completion", async () => {
+    const { baseUrl } = await listen(
+      createReviewHttpServer({
+        webhookSecret,
+        repoAllowlist: ["kei781/sql-agent"],
+        async onRecognizedWebhook() {
+          await new Promise(() => undefined);
+        }
+      })
+    );
+    const body = JSON.stringify({ action: "opened", repository: { full_name: "kei781/sql-agent" } });
+
+    const response = await fetch(`${baseUrl}/webhooks/github`, {
+      method: "POST",
+      headers: signedHeaders("pull_request", "delivery-async-dispatch", body),
+      body,
+      signal: AbortSignal.timeout(500)
+    });
+
+    assert.equal(response.status, 202);
+  });
+
   it("skips unsupported events and repositories without side effects", async () => {
     const recognized: RecognizedWebhookDelivery[] = [];
     const { baseUrl } = await listen(
       createReviewHttpServer({
         webhookSecret,
         repoAllowlist: ["kei781/sql-agent"],
-        onRecognizedWebhook(delivery) {
-          recognized.push(delivery);
+        onRecognizedWebhook(input) {
+          recognized.push(input.delivery);
         }
       })
     );
@@ -297,5 +361,27 @@ function waitForSocketClose(socket: Socket, timeoutMs = 500): Promise<void> {
     };
 
     socket.on("close", onClose);
+  });
+}
+
+function waitFor(predicate: () => boolean, timeoutMs = 500): Promise<void> {
+  const startedAt = Date.now();
+
+  return new Promise((resolve, reject) => {
+    const poll = (): void => {
+      if (predicate()) {
+        resolve();
+        return;
+      }
+
+      if (Date.now() - startedAt > timeoutMs) {
+        reject(new Error("Timed out waiting for predicate"));
+        return;
+      }
+
+      setTimeout(poll, 5);
+    };
+
+    poll();
   });
 }

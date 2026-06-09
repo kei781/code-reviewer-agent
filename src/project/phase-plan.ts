@@ -1,4 +1,11 @@
-export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3a" | "phase-3b" | "phase-3c";
+export type PhaseId =
+  | "phase-0"
+  | "phase-1"
+  | "phase-2"
+  | "phase-3a"
+  | "phase-3b"
+  | "phase-3c"
+  | "phase-3d";
 
 export type PhaseStatus = "implemented" | "implementing" | "blocked-until-pr-comments-resolved" | "planned";
 
@@ -96,6 +103,22 @@ export const implementationPhases = [
       "Command runner replace-env mode for local agent sessions",
       "PR-checkout cwd separation for agent launch",
       "Failure-path tests for independent review execution",
+    ],
+  },
+  {
+    id: "phase-3d",
+    title: "Runtime webhook dispatch wiring",
+    description:
+      "Connect recognized GitHub webhook deliveries to the existing review and reviewer-mention app use cases through explicit dispatcher, metadata, and follow-up responder adapters.",
+    sourceRequirement: "Final dispatch wiring in docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md",
+    status: "implemented",
+    deliverables: [
+      "HTTP callback payload forwarding with immediate 202 acknowledgement",
+      "Webhook dispatcher for pull_request and issue_comment use-case routing",
+      "GitHub PR changed-path and metadata reads behind installation-token-backed adapters",
+      "Claude Code follow-up responder adapter with analysis-only output validation",
+      "Runtime server factory hook for dispatcher injection",
+      "Phase 3D SDD plan and implementation notes",
     ],
   },
 ] as const satisfies readonly PhaseDefinition[];

@@ -5,6 +5,7 @@ import type { Server } from "node:http";
 import { afterEach, describe, it } from "node:test";
 import type { Config } from "../../shared/config.js";
 import { resetLogSink, setLogSink } from "../../shared/log.js";
+import type { RecognizedWebhookHandlerInput } from "../httpServer.js";
 import { closeReviewServer, createRuntimeServer, summarizeConfigFailure } from "../main.js";
 
 const servers: Server[] = [];
@@ -36,6 +37,40 @@ describe("review server runtime main", () => {
       deliveryId: "delivery-main-1",
       repositoryFullName: "kei781/sql-agent"
     });
+  });
+
+  it("wires recognized webhook deliveries to a supplied runtime dispatcher", async () => {
+    setLogSink(() => undefined);
+    const config = baseConfig({ repoAllowlist: ["kei781/sql-agent"] });
+    const recognized: RecognizedWebhookHandlerInput[] = [];
+    const server = createRuntimeServer(config, {
+      onRecognizedWebhook(input) {
+        recognized.push(input);
+      }
+    });
+    const { baseUrl } = await listen(server);
+    const payload = { action: "opened", repository: { full_name: "kei781/sql-agent" } };
+    const body = JSON.stringify(payload);
+
+    const response = await fetch(`${baseUrl}/webhooks/github`, {
+      method: "POST",
+      headers: signedHeaders(config.github.webhookSecret, "pull_request", "delivery-main-dispatch", body),
+      body
+    });
+
+    assert.equal(response.status, 202);
+    await waitFor(() => recognized.length === 1);
+    assert.deepEqual(recognized, [
+      {
+        delivery: {
+          deliveryId: "delivery-main-dispatch",
+          eventName: "pull_request",
+          action: "opened",
+          repositoryFullName: "kei781/sql-agent"
+        },
+        payload
+      }
+    ]);
   });
 
   it("summarizes config failures without leaking config values", () => {
@@ -112,4 +147,26 @@ function signedHeaders(secret: string, eventName: string, deliveryId: string, bo
     "X-GitHub-Event": eventName,
     "X-Hub-Signature-256": `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`
   };
+}
+
+function waitFor(predicate: () => boolean, timeoutMs = 500): Promise<void> {
+  const startedAt = Date.now();
+
+  return new Promise((resolve, reject) => {
+    const poll = (): void => {
+      if (predicate()) {
+        resolve();
+        return;
+      }
+
+      if (Date.now() - startedAt > timeoutMs) {
+        reject(new Error("Timed out waiting for predicate"));
+        return;
+      }
+
+      setTimeout(poll, 5);
+    };
+
+    poll();
+  });
 }

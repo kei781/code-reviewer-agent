@@ -58,7 +58,7 @@ Exit criteria:
 
 ## Phase 3: Self-hosted Webhook Server Runtime
 
-Status: Phase 3A, Phase 3B, and Phase 3C adapter work implemented. Final HTTP-to-use-case dispatch wiring remains the next runtime integration step.
+Status: Phase 3A, Phase 3B, Phase 3C, and Phase 3D runtime dispatch work implemented.
 
 Goal: turn the reusable TypeScript review-server modules into a pm2-runnable self-hosted HTTP runtime.
 
@@ -69,6 +69,7 @@ Deliverables:
 - Runtime recognition for supported `pull_request` and `issue_comment` events. Implemented in Phase 3A as safe acknowledgement and logging.
 - Concrete GitHub payload mapping, GitHub App token, GitHub publication, git workspace, and SQLite state store adapters behind existing app ports. Implemented in Phase 3B.
 - Concrete Claude Code orchestrator adapter, model egress guard, runtime timeout handling, and agent environment scrubber. Implemented in Phase 3C.
+- Runtime webhook dispatcher, PR metadata enrichment, follow-up responder adapter, and immediate `202` acknowledgement behavior. Implemented in Phase 3D.
 - `npm start`, `npm run serve`, and pm2 ecosystem configuration. Implemented in Phase 3A.
 - Operational runbook for local startup, webhook configuration, and shutdown. Implemented in Phase 3A.
 
@@ -77,10 +78,10 @@ Exit criteria:
 - pm2 can keep the built server process alive.
 - `/healthz` reports healthy status.
 - Invalid webhook signatures are rejected without side effects.
-- Phase 3A recognizes supported webhook events and returns a safe acknowledgement; Phase 3B provides the GitHub/workspace/state adapters; Phase 3C provides guarded Claude Code orchestration. The remaining runtime step is wiring recognized webhooks into the app use cases with the concrete adapters.
+- Phase 3A recognizes supported webhook events and returns a safe acknowledgement; Phase 3B provides the GitHub/workspace/state adapters; Phase 3C provides guarded Claude Code orchestration; Phase 3D wires recognized webhook deliveries into the app use cases through explicit runtime ports.
 - GitHub credentials remain server-side and are never injected into agent sessions.
 - The runtime remains review-only and human-gated.
 
 ## Completion Boundary
 
-The implemented source modules currently cover Phase 0 through Phase 2 plus Phase 3A server boot, Phase 3B GitHub/workspace/state adapters, and Phase 3C Claude Code orchestration adapter safety boundaries. The remaining runtime integration work is final dispatch wiring from recognized webhooks into `runEnsembleReview` and `respondToReviewerMention`. After review comments are posted, a human maintainer still decides whether to resolve them, request additional development, or start a separate human-directed implementation task.
+The implemented source modules currently cover Phase 0 through Phase 2 plus Phase 3A server boot, Phase 3B GitHub/workspace/state adapters, Phase 3C Claude Code orchestration adapter safety boundaries, and Phase 3D dispatch wiring from recognized webhooks into `runEnsembleReview` and `respondToReviewerMention`. After review comments are posted, a human maintainer still decides whether to resolve them, request additional development, or start a separate human-directed implementation task.

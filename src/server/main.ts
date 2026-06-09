@@ -1,17 +1,22 @@
 import type { Server } from "node:http";
 import { loadConfig, type Config, type ConfigLoadResult, type ConfigKey, type OptionalConfigKey } from "../shared/config.js";
 import { log } from "../shared/log.js";
-import { createReviewHttpServer } from "./httpServer.js";
+import { createReviewHttpServer, type ReviewHttpServerOptions } from "./httpServer.js";
 
 export interface ConfigFailureSummary {
   readonly missingKeys: readonly ConfigKey[];
   readonly invalidKeys: readonly (ConfigKey | OptionalConfigKey)[];
 }
 
-export function createRuntimeServer(config: Config): Server {
+export interface RuntimeServerOptions {
+  readonly onRecognizedWebhook?: ReviewHttpServerOptions["onRecognizedWebhook"];
+}
+
+export function createRuntimeServer(config: Config, options: RuntimeServerOptions = {}): Server {
   return createReviewHttpServer({
     webhookSecret: config.github.webhookSecret,
-    repoAllowlist: config.repoAllowlist
+    repoAllowlist: config.repoAllowlist,
+    ...(options.onRecognizedWebhook === undefined ? {} : { onRecognizedWebhook: options.onRecognizedWebhook })
   });
 }
 

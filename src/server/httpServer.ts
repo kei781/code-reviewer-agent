@@ -14,7 +14,12 @@ export interface ReviewHttpServerOptions {
   readonly webhookSecret: string;
   readonly maxBodyBytes?: number;
   readonly repoAllowlist?: readonly string[];
-  readonly onRecognizedWebhook?: (delivery: RecognizedWebhookDelivery) => void | Promise<void>;
+  readonly onRecognizedWebhook?: (input: RecognizedWebhookHandlerInput) => void | Promise<void>;
+}
+
+export interface RecognizedWebhookHandlerInput {
+  readonly delivery: RecognizedWebhookDelivery;
+  readonly payload: Record<string, unknown>;
 }
 
 const defaultMaxBodyBytes = 1024 * 1024;
@@ -106,7 +111,7 @@ async function handleGitHubWebhook(
     return;
   }
 
-  await options.onRecognizedWebhook?.(recognition.delivery);
+  dispatchRecognizedWebhook(options, { delivery: recognition.delivery, payload });
   log("github webhook accepted", {
     level: "info",
     metadata: {
@@ -117,6 +122,29 @@ async function handleGitHubWebhook(
     }
   });
   sendJson(response, 202, { status: "accepted", ...recognition.delivery });
+}
+
+function dispatchRecognizedWebhook(options: ReviewHttpServerOptions, input: RecognizedWebhookHandlerInput): void {
+  if (options.onRecognizedWebhook === undefined) {
+    return;
+  }
+
+  setImmediate(() => {
+    void Promise.resolve()
+      .then(() => options.onRecognizedWebhook?.(input))
+      .catch((error: unknown) => {
+        log("github webhook dispatch failed", {
+          level: "error",
+          metadata: {
+            deliveryId: input.delivery.deliveryId,
+            eventName: input.delivery.eventName,
+            action: input.delivery.action,
+            repositoryFullName: input.delivery.repositoryFullName,
+            message: error instanceof Error ? error.message : "unknown error"
+          }
+        });
+      });
+  });
 }
 
 type RawBodyResult =
