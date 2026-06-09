@@ -167,10 +167,12 @@ export type {
 } from "./adapters/github/githubRestClient.js";
 export { createNodeCommandRunner } from "./adapters/workspace/commandRunner.js";
 export type {
+  CommandProcessSpawner,
   CommandInvocation,
   CommandResult,
   CommandRunner,
-  NodeCommandRunnerOptions
+  NodeCommandRunnerOptions,
+  SpawnedCommandProcess
 } from "./adapters/workspace/commandRunner.js";
 export {
   createGitWorkspaceAdapter,
