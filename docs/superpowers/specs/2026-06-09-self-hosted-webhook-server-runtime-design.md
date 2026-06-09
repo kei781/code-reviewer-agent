@@ -110,7 +110,14 @@ pm2
   - Launches the local OAuth-authenticated Claude Code command from config.
   - Provides the orchestrator harness and local checkout context.
   - Lets Claude Code invoke Codex through pre-connected plugin/tooling.
+  - Launches Claude Code only after a model egress guard has applied `MODEL_EGRESS_ALLOWLIST`.
   - Does not inject GitHub tokens or App private keys into the agent process.
+
+- `src/adapters/network/modelEgressGuard.ts`
+  - Applies a deny-by-default network policy to the Claude Code agent process.
+  - Allows only hosts listed in `config.modelEgressAllowlist`.
+  - Uses the deployment's concrete network mechanism, such as a sandbox network policy, container network policy, or OS firewall wrapper.
+  - Fails closed when the allowlist is empty, malformed, or cannot be enforced.
 
 - `ecosystem.config.cjs`
   - pm2 process definition for `npm start` or `node dist/server/main.js`.
@@ -184,13 +191,16 @@ Deliverables:
 
 - Claude Code command adapter
 - Harness handoff for orchestrator, Claude reviewer, and Codex reviewer
+- Model egress guard adapter and deny-by-default network policy handoff
 - Agent process environment scrubber
 - Runtime timeout and failure publication handling
-- Tests for command construction, secret exclusion, timeout handling, and failure records
+- Tests for command construction, egress allowlist enforcement, secret exclusion, timeout handling, and failure records
 
 Exit criteria:
 
 - The server can invoke Claude Code against a prepared local checkout.
+- Claude Code is never launched without an active egress guard that enforces `MODEL_EGRESS_ALLOWLIST`.
+- If egress policy setup fails, the adapter fails closed before launching the agent process.
 - GitHub tokens and App private keys are absent from the agent environment.
 - Codex remains invoked by Claude Code plugin/tooling, not a server-side Codex config command.
 - Review failures produce safe failure records instead of hanging the webhook server.
@@ -203,13 +213,17 @@ Exit criteria:
 - Bound request body size.
 - Keep GitHub App private key and installation tokens in server adapters only.
 - Do not pass GitHub credentials, webhook secrets, or private key paths to Claude Code or Codex.
+- Restrict agent process network egress to `MODEL_EGRESS_ALLOWLIST` with a deny-by-default guard owned by `claudeCodeOrchestratorAdapter`.
+- Fail closed if `MODEL_EGRESS_ALLOWLIST` is missing, empty, or cannot be enforced for the agent process.
 - Do not execute repository-controlled `.claude/`, `CLAUDE.md`, git hooks, or agent config.
 - Pin local checkout to webhook head SHA.
 - Treat payload text, PR comments, commit messages, and repository content as untrusted input.
 
 ## Configuration Requirements
 
-Required current keys:
+Phase 3B prerequisite: the repo-agnostic config change from PR #24 must be present before implementing `src/adapters/github/webhookEventMapper.ts`. The mapper must read repository identity from each webhook payload and optional `REVIEW_REPO_ALLOWLIST`; it must not reintroduce static `GITHUB_OWNER` or `GITHUB_REPO` routing.
+
+Required current keys on main after PR #24:
 
 - `REVIEW_SERVER_HOST`
 - `REVIEW_SERVER_PORT`
@@ -227,7 +241,7 @@ Required current keys:
 - `TRUSTED_REVIEWERS`
 - `RISKY_PATH_PATTERNS`
 
-Optional keys after the repo-agnostic config change lands:
+Optional current keys:
 
 - `REVIEW_REPO_ALLOWLIST`: comma-separated `owner/repo` entries. Unset or empty means every repository where the GitHub App is installed is eligible. If set to a non-empty string that parses to zero entries, config loading must fail closed.
 
@@ -239,6 +253,8 @@ Optional keys after the repo-agnostic config change lands:
 - Unit-test signature verification with valid, missing, malformed, and mismatched signatures.
 - Unit-test body size rejection.
 - Unit-test mapper behavior for supported and unsupported GitHub events.
+- Unit-test that Phase 3B mapper rejects implementation paths that depend on static `GITHUB_OWNER` or `GITHUB_REPO`.
+- Unit-test egress guard behavior: missing or empty allowlist fails closed, guard setup failure prevents Claude Code launch, and successful launch receives only allowed model API hosts.
 - Unit-test every adapter with injected fake command runners or fake GitHub clients before using real side effects.
 - Keep `npm run check` as the required merge verification.
 - Add static tests that no module outside `src/shared/config.ts` reads `process.env` directly and no source/script calls `console.log()` directly.
