@@ -275,7 +275,9 @@ function isValidWebhookEvent(event: PullRequestWebhookEvent): boolean {
     event.pullRequestNumber > 0 &&
     isNonEmpty(event.baseBranch) &&
     isNonEmpty(event.headBranch) &&
-    isNonEmpty(event.headSha)
+    isNonEmpty(event.headSha) &&
+    event.changedPaths.length > 0 &&
+    event.changedPaths.every(isNonEmpty)
   );
 }
 

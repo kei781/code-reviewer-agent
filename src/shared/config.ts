@@ -78,6 +78,10 @@ export function loadConfig(): ConfigLoadResult {
   return loadConfigFromEnv(process.env);
 }
 
+export function getProcessEnvironment(): ConfigEnvSource {
+  return process.env;
+}
+
 export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
   const missingKeys = requiredConfigKeys.filter((key) => readEnvValue(env, key) === undefined);
 

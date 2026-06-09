@@ -1,4 +1,4 @@
-export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3a";
+export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3a" | "phase-3b";
 
 export type PhaseStatus = "implemented" | "implementing" | "blocked-until-pr-comments-resolved" | "planned";
 
@@ -64,6 +64,21 @@ export const implementationPhases = [
       "POST /webhooks/github route with raw-body signature verification",
       "Phase 3A event recognition and safe 202 acknowledgement",
       "npm start, npm run serve, and pm2 ecosystem config",
+    ],
+  },
+  {
+    id: "phase-3b",
+    title: "GitHub, workspace, and persistent state adapters",
+    description:
+      "Add concrete adapter modules for GitHub payload mapping, server-side GitHub App publication, git workspace preparation, and SQLite review state persistence.",
+    sourceRequirement: "Phase 3B in docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md",
+    status: "implemented",
+    deliverables: [
+      "GitHub webhook payload mapper for pull_request and issue_comment events",
+      "GitHub App installation token provider with server-side JWT signing",
+      "GitHub review publisher adapter that posts comments without approvals",
+      "Git workspace adapter pinned to the webhook head SHA",
+      "SQLite review and follow-up state store",
     ],
   },
 ] as const satisfies readonly PhaseDefinition[];

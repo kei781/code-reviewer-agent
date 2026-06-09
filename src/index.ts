@@ -127,6 +127,61 @@ export type {
   WebhookRecognitionResult,
   WebhookSkipReason
 } from "./adapters/github/webhookRecognition.js";
+export {
+  mapPullRequestWebhookPayload,
+  mapReviewerMentionWebhookPayload
+} from "./adapters/github/webhookEventMapper.js";
+export type {
+  GitHubPullRequestMetadata,
+  GitHubWebhookMappingReason,
+  GitHubWebhookMappingResult,
+  PullRequestMappingInput,
+  ReviewerMentionMappingInput
+} from "./adapters/github/webhookEventMapper.js";
+export {
+  createGitHubAppInstallationTokenProvider,
+  createGitHubAppJwt
+} from "./adapters/github/githubAppInstallationToken.js";
+export type {
+  GitHubAppInstallationTokenClient,
+  GitHubAppInstallationTokenProviderOptions,
+  GitHubCreateInstallationTokenInput,
+  GitHubInstallationTokenProvider,
+  GitHubInstallationTokenResponse,
+  GitHubRepositoryInstallationInput
+} from "./adapters/github/githubAppInstallationToken.js";
+export { createGitHubReviewPublisher } from "./adapters/github/githubReviewPublisher.js";
+export type {
+  GitHubAddLabelsInput,
+  GitHubCreateIssueCommentInput,
+  GitHubCreatePullRequestReviewInput,
+  GitHubReviewClient,
+  GitHubReviewComment,
+  GitHubReviewPublisherOptions
+} from "./adapters/github/githubReviewPublisher.js";
+export { createGitHubRestClient } from "./adapters/github/githubRestClient.js";
+export type {
+  GitHubFetch,
+  GitHubRestClient,
+  GitHubRestClientOptions
+} from "./adapters/github/githubRestClient.js";
+export { createNodeCommandRunner } from "./adapters/workspace/commandRunner.js";
+export type {
+  CommandInvocation,
+  CommandResult,
+  CommandRunner,
+  NodeCommandRunnerOptions
+} from "./adapters/workspace/commandRunner.js";
+export {
+  createGitWorkspaceAdapter,
+  resolveGitWorkspacePath
+} from "./adapters/workspace/gitWorkspaceAdapter.js";
+export type { GitWorkspaceAdapterOptions } from "./adapters/workspace/gitWorkspaceAdapter.js";
+export { createSqliteReviewStateStore } from "./adapters/state/sqliteReviewStateStore.js";
+export type {
+  SqliteReviewStateStore,
+  SqliteReviewStateStoreOptions
+} from "./adapters/state/sqliteReviewStateStore.js";
 
 export { createReviewHttpServer } from "./server/httpServer.js";
 export type { ReviewHttpServerOptions } from "./server/httpServer.js";
