@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { getProcessEnvironment, type ConfigEnvSource } from "../../shared/config.js";
 import { log } from "../../shared/log.js";
 
 export interface CommandInvocation {
@@ -6,6 +7,7 @@ export interface CommandInvocation {
   readonly args: readonly string[];
   readonly cwd?: string;
   readonly timeoutMs?: number;
+  readonly env?: Readonly<Record<string, string>>;
 }
 
 export interface CommandResult {
@@ -20,19 +22,26 @@ export interface CommandRunner {
 
 export interface NodeCommandRunnerOptions {
   readonly defaultTimeoutMs?: number;
+  readonly baseEnv?: ConfigEnvSource;
 }
 
 const defaultCommandTimeoutMs = 120_000;
 
 export function createNodeCommandRunner(options: NodeCommandRunnerOptions = {}): CommandRunner {
+  const baseEnv = options.baseEnv ?? getProcessEnvironment();
+
   return {
     run(command) {
-      return runNodeCommand(command, options.defaultTimeoutMs ?? defaultCommandTimeoutMs);
+      return runNodeCommand(command, options.defaultTimeoutMs ?? defaultCommandTimeoutMs, baseEnv);
     }
   };
 }
 
-function runNodeCommand(command: CommandInvocation, defaultTimeoutMs: number): Promise<CommandResult> {
+function runNodeCommand(
+  command: CommandInvocation,
+  defaultTimeoutMs: number,
+  baseEnv: ConfigEnvSource
+): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
     log("Running command", {
       level: "debug",
@@ -43,7 +52,7 @@ function runNodeCommand(command: CommandInvocation, defaultTimeoutMs: number): P
       }
     });
 
-    const child = spawn(command.executable, [...command.args], buildSpawnOptions(command));
+    const child = spawn(command.executable, [...command.args], buildSpawnOptions(command, baseEnv));
     const timeoutMs = command.timeoutMs ?? defaultTimeoutMs;
     let stdout = "";
     let stderr = "";
@@ -77,10 +86,15 @@ function runNodeCommand(command: CommandInvocation, defaultTimeoutMs: number): P
   });
 }
 
-function buildSpawnOptions(command: CommandInvocation): { readonly cwd?: string; readonly windowsHide: true } {
-  if (command.cwd === undefined) {
-    return { windowsHide: true };
-  }
+function buildSpawnOptions(
+  command: CommandInvocation,
+  baseEnv: ConfigEnvSource
+): { readonly cwd?: string; readonly env?: NodeJS.ProcessEnv; readonly windowsHide: true } {
+  const env = command.env === undefined ? undefined : { ...baseEnv, ...command.env };
 
-  return { cwd: command.cwd, windowsHide: true };
+  return {
+    windowsHide: true,
+    ...(command.cwd === undefined ? {} : { cwd: command.cwd }),
+    ...(env === undefined ? {} : { env })
+  };
 }
