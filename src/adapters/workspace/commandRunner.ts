@@ -8,6 +8,7 @@ export interface CommandInvocation {
   readonly cwd?: string;
   readonly timeoutMs?: number;
   readonly env?: Readonly<Record<string, string>>;
+  readonly envMode?: "merge" | "replace";
 }
 
 export interface CommandResult {
@@ -90,11 +91,26 @@ function buildSpawnOptions(
   command: CommandInvocation,
   baseEnv: ConfigEnvSource
 ): { readonly cwd?: string; readonly env?: NodeJS.ProcessEnv; readonly windowsHide: true } {
-  const env = command.env === undefined ? undefined : { ...baseEnv, ...command.env };
+  const env = buildCommandEnvironment(command, baseEnv);
 
   return {
     windowsHide: true,
     ...(command.cwd === undefined ? {} : { cwd: command.cwd }),
     ...(env === undefined ? {} : { env })
   };
+}
+
+function buildCommandEnvironment(
+  command: CommandInvocation,
+  baseEnv: ConfigEnvSource
+): NodeJS.ProcessEnv | undefined {
+  if (command.env === undefined) {
+    return undefined;
+  }
+
+  if (command.envMode === "replace") {
+    return { ...command.env };
+  }
+
+  return { ...baseEnv, ...command.env };
 }

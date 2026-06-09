@@ -52,6 +52,7 @@ function createPorts(
     readonly corroboratingAgentIdsByFindingId?: Readonly<Record<string, readonly string[]>>;
     readonly alreadyPostedFingerprints?: readonly string[];
     readonly prepareWorkspaceError?: Error;
+    readonly runIndependentReviewsError?: Error;
     readonly publishReviewError?: Error;
   } = {}
 ) {
@@ -104,6 +105,9 @@ function createPorts(
       async runIndependentReviews(context) {
         calls.order.push("runIndependentReviews");
         calls.runIndependentReviews.push(context);
+        if (options.runIndependentReviewsError) {
+          throw options.runIndependentReviewsError;
+        }
 
         const candidateFindings = options.candidateFindings ?? [
           candidateFinding(),
@@ -398,6 +402,26 @@ describe("runEnsembleReview", () => {
     const failure = calls.publishFailure[0] as Parameters<ReviewServerPorts["publisher"]["publishFailure"]>[0];
     assert.equal(failure.stage, "prepare-workspace");
     assert.equal(failure.message, "workspace failed");
+  });
+
+  it("publishes a structured failure when independent agent review throws", async () => {
+    const { ports, calls } = createPorts({ runIndependentReviewsError: new Error("orchestrator failed") });
+
+    const result = await runEnsembleReview(baseWebhookEvent(), ports);
+
+    assert.deepEqual(result, { status: "failed", stage: "run-independent-reviews" });
+    assert.deepEqual(calls.order, [
+      "claimReview",
+      "prepareWorkspace",
+      "runIndependentReviews",
+      "publishFailure",
+      "markReviewFailed"
+    ]);
+    assert.equal(calls.publishReview.length, 0);
+
+    const failure = calls.publishFailure[0] as Parameters<ReviewServerPorts["publisher"]["publishFailure"]>[0];
+    assert.equal(failure.stage, "run-independent-reviews");
+    assert.equal(failure.message, "orchestrator failed");
   });
 
   it("publishes a structured failure when review publication throws", async () => {

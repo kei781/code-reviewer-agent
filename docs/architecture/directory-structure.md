@@ -43,7 +43,7 @@ Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToR
 
 The active implementation stops there. After review comments are posted, a human maintainer decides whether to resolve them or request additional development.
 
-Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. Phase 3A adds the `src/server` process entrypoint and HTTP route handling. Phase 3B adds concrete GitHub payload mapping, GitHub App token/publication, git workspace, and SQLite state store adapters under `src/adapters`. Claude Code execution, egress guarding, agent environment scrubbing, and final dispatch wiring remain Phase 3C work. Reusable review decisions stay in `src/domain` and `src/app`.
+Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. Phase 3A adds the `src/server` process entrypoint and HTTP route handling. Phase 3B adds concrete GitHub payload mapping, GitHub App token/publication, git workspace, and SQLite state store adapters under `src/adapters`. Phase 3C adds `src/adapters/orchestrator` for the Claude Code command adapter and `src/adapters/network` for the model egress guard abstraction. Final HTTP-to-use-case dispatch wiring remains the next runtime integration step. Reusable review decisions stay in `src/domain` and `src/app`.
 
 ## Dependency Rules
 
@@ -55,7 +55,7 @@ src/app           -> use cases and ports; may import domain/shared/project
 src/agents        -> role specs and harness builders; may import domain/project context types
 src/server        -> process entrypoint and HTTP route layer; may import app/adapters/shared but must not contain reusable review policy
 src/orchestration -> side-effect-free P0 run plans; may import agents/domain/project/shared
-src/adapters      -> concrete SDK, filesystem, network, shell, model, and GitHub implementations
+src/adapters      -> concrete SDK, filesystem, network, shell, model, orchestrator, and GitHub implementations
 ```
 
 Forbidden directions:

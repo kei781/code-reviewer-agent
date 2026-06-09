@@ -2,7 +2,7 @@
 
 ## Status
 
-Design PR. This document opens the runtime implementation phase. It does not add a listening server, pm2 process, GitHub SDK adapter, git adapter, or Claude Code execution adapter.
+Runtime design record. Phase 3A added the listening server and pm2 entrypoint, Phase 3B added GitHub/workspace/state adapters, and Phase 3C added the guarded Claude Code orchestration adapter. Final dispatch wiring from recognized webhooks into the app use cases remains the next runtime integration step.
 
 ## Intent
 
@@ -71,7 +71,7 @@ pm2
 - `src/server/main.ts`
   - Process entrypoint.
   - Loads typed config.
-  - Builds concrete adapters.
+  - Builds concrete adapters once final dispatch wiring is implemented.
   - Starts the HTTP server.
   - Handles `SIGINT` and `SIGTERM` by closing the server and logging shutdown.
 
@@ -188,6 +188,8 @@ Exit criteria:
 
 Intent: run the local Claude Code orchestrator as the concrete review engine.
 
+Status: implemented as the adapter and safety boundary layer. The remaining integration work is connecting recognized webhook deliveries to app use cases with the concrete adapters.
+
 Deliverables:
 
 - Claude Code command adapter
@@ -217,6 +219,7 @@ Exit criteria:
 - Restrict agent process network egress to `MODEL_EGRESS_ALLOWLIST` with a deny-by-default guard owned by `claudeCodeOrchestratorAdapter`.
 - Fail closed if `MODEL_EGRESS_ALLOWLIST` is missing, empty, or cannot be enforced for the agent process.
 - Do not execute repository-controlled `.claude/`, `CLAUDE.md`, git hooks, or agent config.
+- Do not default the agent process working directory to the PR-controlled checkout; pass the checkout path as untrusted review data instead.
 - Pin local checkout to webhook head SHA.
 - Treat payload text, PR comments, commit messages, and repository content as untrusted input.
 
@@ -271,7 +274,7 @@ Optional current keys:
 
 ## Design Decisions for Implementation Plan
 
-- Phase 3A returns `202 Accepted` after raw-body capture, signature verification, event classification, repo allowlist checks, and a logged recognized-event record. It does not invoke the full review use cases until the concrete GitHub, workspace, state, and orchestrator adapters exist in Phase 3B and Phase 3C.
+- Phase 3A returns `202 Accepted` after raw-body capture, signature verification, event classification, repo allowlist checks, and a logged recognized-event record. Full review use-case invocation remains a final dispatch wiring step now that the Phase 3B GitHub/workspace/state adapters and Phase 3C orchestrator adapter exist.
 - Phase 3B uses Node 24 `node:sqlite` behind a `ReviewStateStore` adapter because the pinned local runtime provides it. The adapter must keep SQLite APIs out of `src/domain` and `src/app`, so a later move to an external SQLite package only changes `src/adapters/state`.
 - pm2 runs the built `dist/server/cli.js` directly with Node 24 `--env-file=.env`. `npm start` uses the same Node command, and `npm run serve` builds first and then delegates to `npm start`. The pm2 ecosystem file does not store secrets.
 
