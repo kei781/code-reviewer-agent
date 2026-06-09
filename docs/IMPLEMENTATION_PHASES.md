@@ -72,7 +72,7 @@ Title: `P0: Add pm2-runnable webhook server runtime`
 
 Design source: `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`
 
-Status: Phase 3A bootable runtime implemented; Phase 3B GitHub/workspace/state adapters implemented; Phase 3C Claude Code orchestration remains planned.
+Status: Phase 3A bootable runtime implemented; Phase 3B GitHub/workspace/state adapters implemented; Phase 3C Claude Code orchestration adapter implemented. Final dispatch wiring remains the next integration step.
 
 Scope:
 
@@ -81,8 +81,8 @@ Scope:
 - Add `POST /webhooks/github` with bounded raw-body parsing.
 - Verify GitHub webhook signatures before parsing JSON.
 - Recognize supported `pull_request` and `issue_comment` events and acknowledge them safely in Phase 3A.
-- Route supported events to the existing app use cases once the Phase 3C orchestrator adapter and final dispatch wiring are implemented.
-- Implement concrete adapters for GitHub publication, git workspace preparation, persistent state, and Claude Code orchestration in separate implementation PRs. GitHub/workspace/state adapters are implemented in Phase 3B; Claude Code orchestration remains Phase 3C.
+- Route supported events to the existing app use cases once final dispatch wiring is implemented.
+- Implement concrete adapters for GitHub publication, git workspace preparation, persistent state, and Claude Code orchestration in separate implementation PRs. GitHub/workspace/state adapters are implemented in Phase 3B; Claude Code orchestration is implemented in Phase 3C.
 - Add `npm start`, `npm run serve`, pm2 ecosystem config, and an operational runbook.
 
 Exit criteria:
@@ -96,4 +96,4 @@ Exit criteria:
 
 ## Completion Boundary
 
-The implemented source modules currently cover Phase 0 through Phase 2 plus Phase 3A server boot and Phase 3B GitHub/workspace/state adapters. The remaining Phase 3C adapter work should be implemented in a separately reviewable PR. Once the review server posts validated review comments, the next action belongs to a human maintainer: resolve comments, request more development, or perform follow-up work in a separate human-directed task.
+The implemented source modules currently cover Phase 0 through Phase 2 plus Phase 3A server boot, Phase 3B GitHub/workspace/state adapters, and Phase 3C Claude Code orchestration adapter boundaries. The remaining runtime integration work is the final HTTP-to-use-case dispatch wiring. Once the review server posts validated review comments, the next action belongs to a human maintainer: resolve comments, request more development, or perform follow-up work in a separate human-directed task.

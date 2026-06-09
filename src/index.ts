@@ -167,16 +167,39 @@ export type {
 } from "./adapters/github/githubRestClient.js";
 export { createNodeCommandRunner } from "./adapters/workspace/commandRunner.js";
 export type {
+  CommandProcessSpawner,
   CommandInvocation,
   CommandResult,
   CommandRunner,
-  NodeCommandRunnerOptions
+  NodeCommandRunnerOptions,
+  SpawnedCommandProcess
 } from "./adapters/workspace/commandRunner.js";
 export {
   createGitWorkspaceAdapter,
   resolveGitWorkspacePath
 } from "./adapters/workspace/gitWorkspaceAdapter.js";
 export type { GitWorkspaceAdapterOptions } from "./adapters/workspace/gitWorkspaceAdapter.js";
+export {
+  createModelEgressGuard
+} from "./adapters/network/modelEgressGuard.js";
+export type {
+  ModelEgressEnforcer,
+  ModelEgressGuard,
+  ModelEgressGuardOptions,
+  ModelEgressPolicyInput,
+  ModelEgressSession
+} from "./adapters/network/modelEgressGuard.js";
+export {
+  buildAgentEnvironment,
+  isSecretEnvironmentKey
+} from "./adapters/orchestrator/agentEnvironment.js";
+export type { AgentEnvironmentSource } from "./adapters/orchestrator/agentEnvironment.js";
+export {
+  createClaudeCodeOrchestratorAdapter,
+  orchestratorOutputEndMarker,
+  orchestratorOutputStartMarker
+} from "./adapters/orchestrator/claudeCodeOrchestratorAdapter.js";
+export type { ClaudeCodeOrchestratorAdapterOptions } from "./adapters/orchestrator/claudeCodeOrchestratorAdapter.js";
 export { createSqliteReviewStateStore } from "./adapters/state/sqliteReviewStateStore.js";
 export type {
   SqliteReviewStateStore,

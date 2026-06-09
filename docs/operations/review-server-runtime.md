@@ -4,7 +4,7 @@
 
 Phase 3A provides the bootable self-hosted HTTP runtime. It opens a local Node.js server, exposes health and GitHub webhook routes, verifies GitHub webhook signatures, recognizes supported events, logs through `log()`, and returns safe acknowledgements.
 
-Phase 3A does not run GitHub publication, git workspace preparation, persistent state, or Claude Code orchestration. Those concrete adapters remain Phase 3B and Phase 3C work.
+Phase 3B provides the GitHub publication, git workspace preparation, and persistent state adapters. Phase 3C provides the guarded Claude Code orchestration adapter. Final HTTP-to-use-case dispatch wiring remains the next runtime integration step.
 
 ## Local Startup
 
@@ -46,7 +46,7 @@ POST /webhooks/github
 
 The server requires `X-Hub-Signature-256` and verifies it against `GITHUB_WEBHOOK_SECRET` before JSON parsing.
 
-Supported Phase 3A events:
+Recognized events:
 
 - `pull_request`: `opened`, `synchronize`, `reopened`, `ready_for_review`
 - `issue_comment`: `created`, `edited`

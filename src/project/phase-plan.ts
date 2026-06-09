@@ -1,4 +1,4 @@
-export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3a" | "phase-3b";
+export type PhaseId = "phase-0" | "phase-1" | "phase-2" | "phase-3a" | "phase-3b" | "phase-3c";
 
 export type PhaseStatus = "implemented" | "implementing" | "blocked-until-pr-comments-resolved" | "planned";
 
@@ -79,6 +79,23 @@ export const implementationPhases = [
       "GitHub review publisher adapter that posts comments without approvals",
       "Git workspace adapter pinned to the webhook head SHA",
       "SQLite review and follow-up state store",
+    ],
+  },
+  {
+    id: "phase-3c",
+    title: "Claude Code orchestrator runtime adapter",
+    description:
+      "Add the guarded Claude Code orchestration adapter that runs the local OAuth-authenticated Claude Code command, scrubs agent environment, enforces model egress setup, and returns structured review results.",
+    sourceRequirement: "Phase 3C in docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md",
+    status: "implemented",
+    deliverables: [
+      "Claude Code orchestrator adapter behind the existing app port",
+      "Structured JSON output contract for server-side publication",
+      "Model egress guard abstraction with fail-closed behavior",
+      "Agent environment scrubber that excludes server-side GitHub secrets",
+      "Command runner replace-env mode for local agent sessions",
+      "PR-checkout cwd separation for agent launch",
+      "Failure-path tests for independent review execution",
     ],
   },
 ] as const satisfies readonly PhaseDefinition[];
