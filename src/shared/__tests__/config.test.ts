@@ -14,8 +14,6 @@ describe("shared runtime config", () => {
     GITHUB_APP_ID: "123456",
     GITHUB_APP_PRIVATE_KEY_PATH: "/run/secrets/github-app.private-key.pem",
     GITHUB_WEBHOOK_SECRET: "replace-with-random-webhook-secret",
-    GITHUB_OWNER: "kei781",
-    GITHUB_REPO: "sql-agent",
     CLAUDE_CODE_COMMAND: "claude",
     CLAUDE_CODE_AUTH_MODE: "local-oauth",
     MODEL_EGRESS_ALLOWLIST: "api.anthropic.com,api.openai.com",
@@ -83,9 +81,7 @@ describe("shared runtime config", () => {
       assert.deepEqual(result.config.github, {
         appId: "123456",
         privateKeyPath: "/run/secrets/github-app.private-key.pem",
-        webhookSecret: "replace-with-random-webhook-secret",
-        owner: "kei781",
-        repo: "sql-agent"
+        webhookSecret: "replace-with-random-webhook-secret"
       });
       assert.deepEqual(result.config.orchestrator, {
         command: "claude",
@@ -93,6 +89,48 @@ describe("shared runtime config", () => {
       });
       assert.deepEqual(result.config.modelEgressAllowlist, ["api.anthropic.com", "api.openai.com"]);
       assert.deepEqual(result.config.policy.trustedReviewers, ["claude[bot]", "claude-code[bot]"]);
+      assert.deepEqual(result.config.repoAllowlist, []);
+    }
+  });
+
+  it("is repo-agnostic by default and parses an optional repo allowlist when set", () => {
+    const agnostic = loadConfigFromEnv(completeEnv);
+    assert.equal(agnostic.ok, true);
+    if (agnostic.ok) {
+      assert.deepEqual(agnostic.config.repoAllowlist, []);
+    }
+
+    const scoped = loadConfigFromEnv({
+      ...completeEnv,
+      REVIEW_REPO_ALLOWLIST: "kei781/sql-agent, kei781/code-reviewer-agent"
+    });
+    assert.equal(scoped.ok, true);
+    if (scoped.ok) {
+      assert.deepEqual(scoped.config.repoAllowlist, ["kei781/sql-agent", "kei781/code-reviewer-agent"]);
+    }
+
+    // Empty / whitespace-only stays repo-agnostic (intentional).
+    const emptyString = loadConfigFromEnv({ ...completeEnv, REVIEW_REPO_ALLOWLIST: "   " });
+    assert.equal(emptyString.ok, true);
+    if (emptyString.ok) {
+      assert.deepEqual(emptyString.config.repoAllowlist, []);
+    }
+  });
+
+  it("rejects a repo allowlist that is set but lists no valid entries (no silent fail-open)", () => {
+    for (const value of [",,", " , "]) {
+      const result = loadConfigFromEnv({ ...completeEnv, REVIEW_REPO_ALLOWLIST: value });
+
+      assert.equal(result.ok, false, `expected ${JSON.stringify(value)} to be rejected`);
+      if (!result.ok) {
+        assert.deepEqual(result.missingKeys, []);
+        assert.deepEqual(result.invalidValues, [
+          {
+            key: "REVIEW_REPO_ALLOWLIST",
+            reason: "is set but lists no valid owner/repo entries"
+          }
+        ]);
+      }
     }
   });
 

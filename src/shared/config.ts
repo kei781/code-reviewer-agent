@@ -6,8 +6,6 @@ export const requiredConfigKeys = [
   "GITHUB_APP_ID",
   "GITHUB_APP_PRIVATE_KEY_PATH",
   "GITHUB_WEBHOOK_SECRET",
-  "GITHUB_OWNER",
-  "GITHUB_REPO",
   "CLAUDE_CODE_COMMAND",
   "CLAUDE_CODE_AUTH_MODE",
   "MODEL_EGRESS_ALLOWLIST",
@@ -19,6 +17,9 @@ export const requiredConfigKeys = [
 ] as const;
 
 export type ConfigKey = (typeof requiredConfigKeys)[number];
+
+export const optionalConfigKeys = ["REVIEW_REPO_ALLOWLIST"] as const;
+export type OptionalConfigKey = (typeof optionalConfigKeys)[number];
 
 export type ConfigEnvSource = {
   readonly [key: string]: string | undefined;
@@ -40,11 +41,12 @@ export interface Config {
     readonly appId: string;
     readonly privateKeyPath: string;
     readonly webhookSecret: string;
-    readonly owner: string;
-    readonly repo: string;
   };
   readonly orchestrator: OrchestratorCliConfig;
   readonly modelEgressAllowlist: readonly string[];
+  // Optional repo scope. Empty = review ANY repo the GitHub App is installed on;
+  // repo identity is taken per-event from the webhook payload, not from static config.
+  readonly repoAllowlist: readonly string[];
   readonly policy: {
     readonly labels: {
       readonly humanReview: string;
@@ -57,7 +59,7 @@ export interface Config {
 }
 
 export interface InvalidConfigValue {
-  readonly key: ConfigKey;
+  readonly key: ConfigKey | OptionalConfigKey;
   readonly reason: string;
 }
 
@@ -92,10 +94,13 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
     "must list at least one allowed egress host"
   );
 
+  const repoAllowlist = readOptionalAllowlist(env, "REVIEW_REPO_ALLOWLIST", invalidValues);
+
   if (
     invalidValues.length > 0 ||
     port === undefined ||
-    modelEgressAllowlist === undefined
+    modelEgressAllowlist === undefined ||
+    repoAllowlist === undefined
   ) {
     return { ok: false, missingKeys: [], invalidValues };
   }
@@ -112,15 +117,14 @@ export function loadConfigFromEnv(env: ConfigEnvSource): ConfigLoadResult {
       github: {
         appId: requiredValue(env, "GITHUB_APP_ID"),
         privateKeyPath: requiredValue(env, "GITHUB_APP_PRIVATE_KEY_PATH"),
-        webhookSecret: requiredValue(env, "GITHUB_WEBHOOK_SECRET"),
-        owner: requiredValue(env, "GITHUB_OWNER"),
-        repo: requiredValue(env, "GITHUB_REPO")
+        webhookSecret: requiredValue(env, "GITHUB_WEBHOOK_SECRET")
       },
       orchestrator: {
         command: requiredValue(env, "CLAUDE_CODE_COMMAND"),
         authMode: requiredValue(env, "CLAUDE_CODE_AUTH_MODE")
       },
       modelEgressAllowlist,
+      repoAllowlist,
       policy: {
         labels: {
           humanReview: requiredValue(env, "HUMAN_REVIEW_LABEL"),
@@ -154,6 +158,33 @@ function readCsv(env: ConfigEnvSource, key: ConfigKey): readonly string[] {
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
+}
+
+function readOptionalAllowlist(
+  env: ConfigEnvSource,
+  key: OptionalConfigKey,
+  invalidValues: InvalidConfigValue[]
+): readonly string[] | undefined {
+  const raw = env[key];
+
+  // Unset or empty/whitespace-only: intentional repo-agnostic scope.
+  if (raw === undefined || raw.trim().length === 0) {
+    return [];
+  }
+
+  // Present and non-empty but no valid entries (e.g. ",," or " , "): the operator
+  // tried to restrict scope — fail closed instead of silently allowing all repos.
+  const entries = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (entries.length === 0) {
+    invalidValues.push({ key, reason: "is set but lists no valid owner/repo entries" });
+    return undefined;
+  }
+
+  return entries;
 }
 
 function readNonEmptyCsv(
