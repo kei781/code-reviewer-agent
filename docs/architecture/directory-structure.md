@@ -16,6 +16,7 @@ This repository is split by responsibility so each module can be reused by a fut
 |   |-- app/
 |   |-- adapters/
 |   |-- agents/
+|   |-- server/        # planned Phase 3 HTTP entrypoint and route layer
 |   |-- orchestration/
 |   |-- shared/
 |   `-- project/
@@ -42,6 +43,8 @@ Phase 2 keeps the same boundary for reviewer follow-up interactions. `RespondToR
 
 The active implementation stops there. After review comments are posted, a human maintainer decides whether to resolve them or request additional development.
 
+Phase 3 opens the runtime boundary described in `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`. It adds a planned `src/server` layer for the process entrypoint and HTTP route handling. Concrete GitHub, git, state, and Claude Code effects still belong in `src/adapters`, and reusable review decisions stay in `src/domain` and `src/app`.
+
 ## Dependency Rules
 
 ```text
@@ -50,6 +53,7 @@ src/shared        -> project-agnostic utilities and central runtime config parsi
 src/domain        -> pure policies, contracts, and state; may import shared/project
 src/app           -> use cases and ports; may import domain/shared/project
 src/agents        -> role specs and harness builders; may import domain/project context types
+src/server        -> process entrypoint and HTTP route layer; may import app/adapters/shared but must not contain reusable review policy
 src/orchestration -> side-effect-free P0 run plans; may import agents/domain/project/shared
 src/adapters      -> concrete SDK, filesystem, network, shell, model, and GitHub implementations
 ```
@@ -58,6 +62,7 @@ Forbidden directions:
 
 - `src/domain` must not import `src/app` or `src/adapters`.
 - `src/app` must not hard-code a model provider, GitHub SDK, shell command implementation, or persistence implementation.
+- `src/server` must keep HTTP concerns thin and delegate GitHub, git, state, and model execution to adapters.
 - `src/shared` must not contain project-specific PR review policy.
 - `src/shared/config.ts` is the only TypeScript source module that may read `process.env`; adapter/runtime code should consume the exported typed config instead of reading env directly.
 - `src/agents` harnesses must not hold secrets, GitHub tokens, or hidden shared reviewer context.

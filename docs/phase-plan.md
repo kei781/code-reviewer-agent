@@ -56,6 +56,30 @@ Exit criteria:
 - Fork, closed, non-PR, blocked-label, duplicate, and stale comment cases skip safely.
 - Requests to change code or merge remain read-only responses.
 
+## Phase 3: Self-hosted Webhook Server Runtime
+
+Status: planned by `docs/superpowers/specs/2026-06-09-self-hosted-webhook-server-runtime-design.md`.
+
+Goal: turn the reusable TypeScript review-server modules into a pm2-runnable self-hosted HTTP runtime.
+
+Deliverables:
+
+- Node.js server entrypoint with `GET /healthz` and `POST /webhooks/github`.
+- GitHub webhook signature verification before JSON parsing.
+- Runtime route mapping for supported `pull_request` and `issue_comment` events.
+- Concrete GitHub, git workspace, state store, and Claude Code orchestrator adapters behind existing app ports.
+- `npm start`, `npm run serve`, and pm2 ecosystem configuration.
+- Operational runbook for local startup, webhook configuration, and shutdown.
+
+Exit criteria:
+
+- pm2 can keep the built server process alive.
+- `/healthz` reports healthy status.
+- Invalid webhook signatures are rejected without side effects.
+- Supported webhook events reach the existing app use cases through injected adapters.
+- GitHub credentials remain server-side and are never injected into agent sessions.
+- The runtime remains review-only and human-gated.
+
 ## Completion Boundary
 
-The implemented phase set ends at Phase 2. After review comments are posted, a human maintainer decides whether to resolve them, request additional development, or start a separate human-directed implementation task.
+The implemented source modules currently cover Phase 0 through Phase 2. Phase 3 is the next planned runtime phase and is intentionally split into design, server boot, concrete adapters, and Claude Code orchestration implementation PRs. After review comments are posted, a human maintainer still decides whether to resolve them, request additional development, or start a separate human-directed implementation task.
