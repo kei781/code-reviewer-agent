@@ -43,6 +43,71 @@ describe("createReviewHttpServer", () => {
     assert.deepEqual(await response.json(), { status: "ok" });
   });
 
+  it("serves a usage guide at the root path", async () => {
+    const { baseUrl } = await listen(createReviewHttpServer({ webhookSecret }));
+
+    const response = await fetch(`${baseUrl}/`);
+    const text = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /^text\/plain/u);
+    assert.match(text, /리뷰요청:/u);
+    assert.match(text, /\/request_reviewer\/\*/u);
+    assert.match(text, /POST \/request_reviewer\/webhook/u);
+    assert.match(text, /GITHUB_WEBHOOK_SECRET/u);
+  });
+
+  it("serves the webhook setup guide on GET /request_reviewer/webhook", async () => {
+    const { baseUrl } = await listen(createReviewHttpServer({ webhookSecret }));
+
+    const response = await fetch(`${baseUrl}/request_reviewer/webhook`);
+    const text = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /^text\/plain/u);
+    assert.match(text, /세팅 가이드/u);
+    assert.match(text, /X-Hub-Signature-256/u);
+    assert.match(text, /GITHUB_WEBHOOK_SECRET/u);
+  });
+
+  it("accepts review requests on POST /request_reviewer/webhook like the legacy webhook path", async () => {
+    const recognized: RecognizedWebhookDelivery[] = [];
+    const { baseUrl } = await listen(
+      createReviewHttpServer({
+        webhookSecret,
+        repoAllowlist: ["kei781/sql-agent"],
+        onRecognizedWebhook(input) {
+          recognized.push(input.delivery);
+        }
+      })
+    );
+    const body = JSON.stringify({ action: "opened", repository: { full_name: "kei781/sql-agent" } });
+
+    const response = await fetch(`${baseUrl}/request_reviewer/webhook`, {
+      method: "POST",
+      headers: signedHeaders("pull_request", "delivery-request-reviewer", body),
+      body
+    });
+
+    assert.equal(response.status, 202);
+    assert.deepEqual(await response.json(), {
+      status: "accepted",
+      eventName: "pull_request",
+      action: "opened",
+      deliveryId: "delivery-request-reviewer",
+      repositoryFullName: "kei781/sql-agent"
+    });
+    await waitFor(() => recognized.length === 1);
+    assert.deepEqual(recognized, [
+      {
+        deliveryId: "delivery-request-reviewer",
+        eventName: "pull_request",
+        action: "opened",
+        repositoryFullName: "kei781/sql-agent"
+      }
+    ]);
+  });
+
   it("rejects invalid webhook signatures before recognizing events", async () => {
     const recognized: RecognizedWebhookDelivery[] = [];
     const { baseUrl } = await listen(
