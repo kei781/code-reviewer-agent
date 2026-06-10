@@ -97,6 +97,7 @@ describe("createReviewHttpServer", () => {
       deliveryId: "delivery-request-reviewer",
       repositoryFullName: "kei781/sql-agent"
     });
+    await waitFor(() => recognized.length === 1);
     assert.deepEqual(recognized, [
       {
         deliveryId: "delivery-request-reviewer",

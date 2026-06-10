@@ -32,7 +32,7 @@ GitHub App(또는 저장소 Settings > Webhooks)에 아래 값을 등록하세�
 
 1. Payload URL
    https://<이 서버의 공개 주소>/request_reviewer/webhook
-   (로컬 예시: http://127.0.0.1:3001/request_reviewer/webhook)
+   (로컬 예시: http://127.0.0.1:3000/request_reviewer/webhook — 포트는 REVIEW_SERVER_PORT 설정값)
 
 2. Content type
    application/json
