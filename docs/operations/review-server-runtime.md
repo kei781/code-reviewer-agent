@@ -48,7 +48,7 @@ POST /request_reviewer/webhook
 
 The server requires `X-Hub-Signature-256` and verifies it against `GITHUB_WEBHOOK_SECRET` before JSON parsing.
 
-In the repository webhook UI, choose `Let me select individual events.` under `Which events would you like to trigger this webhook?` Do not leave the default `Just the push event.` selected.
+In the repository webhook UI, choose `Let me select individual events.` under `Which events would you like to trigger this webhook?` Do not leave the default `Just the push event.` selected, and do not choose `Send me everything.` either; it forwards unnecessary events.
 
 Select only these event groups:
 
