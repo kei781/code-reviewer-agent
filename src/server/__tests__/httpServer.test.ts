@@ -66,6 +66,18 @@ describe("createReviewHttpServer", () => {
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type") ?? "", /^text\/plain/u);
     assert.match(text, /세팅 가이드/u);
+    assert.match(text, /Let me select individual events\./u);
+    assert.match(text, /Just the push event\./u);
+    assert.match(text, /Send me everything\./u);
+    assert.match(text, /Pull requests/u);
+    assert.match(text, /Issue comments/u);
+    assert.match(text, /Pull request reviews/u);
+    assert.match(text, /Pull request review comments/u);
+    assert.match(text, /Pull request review threads/u);
+    assert.match(
+      text,
+      /Pull requests[\s\S]*Issue comments[\s\S]*비슷한 이름이지만[\s\S]*Pull request reviews[\s\S]*Pull request review comments[\s\S]*Pull request review threads/u
+    );
     assert.match(text, /X-Hub-Signature-256/u);
     assert.match(text, /GITHUB_WEBHOOK_SECRET/u);
   });
