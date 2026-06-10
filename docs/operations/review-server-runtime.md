@@ -50,6 +50,13 @@ The server requires `X-Hub-Signature-256` and verifies it against `GITHUB_WEBHOO
 
 In the repository webhook UI, choose `Let me select individual events.` under `Which events would you like to trigger this webhook?` Do not leave the default `Just the push event.` selected.
 
+Select only these event groups:
+
+- `Pull requests`
+- `Issue comments`
+
+Do not select the similarly named `Pull request reviews`, `Pull request review comments`, or `Pull request review threads`; those describe formal review activity and thread state, not the PR-open/update and reviewer-mention triggers this server consumes.
+
 Recognized events:
 
 - `pull_request`: `opened`, `synchronize`, `reopened`, `ready_for_review`
