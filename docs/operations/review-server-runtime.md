@@ -41,10 +41,14 @@ Expected response:
 Configure the GitHub App webhook URL to point at:
 
 ```text
-POST /webhooks/github
+POST /request_reviewer/webhook
 ```
 
+`POST /webhooks/github` remains available as the legacy-compatible path.
+
 The server requires `X-Hub-Signature-256` and verifies it against `GITHUB_WEBHOOK_SECRET` before JSON parsing.
+
+In the repository webhook UI, choose `Let me select individual events.` under `Which events would you like to trigger this webhook?` Do not leave the default `Just the push event.` selected.
 
 Recognized events:
 

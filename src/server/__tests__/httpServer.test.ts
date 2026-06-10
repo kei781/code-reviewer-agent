@@ -66,6 +66,9 @@ describe("createReviewHttpServer", () => {
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type") ?? "", /^text\/plain/u);
     assert.match(text, /세팅 가이드/u);
+    assert.match(text, /Let me select individual events\./u);
+    assert.match(text, /Just the push event\./u);
+    assert.match(text, /Send me everything\./u);
     assert.match(text, /X-Hub-Signature-256/u);
     assert.match(text, /GITHUB_WEBHOOK_SECRET/u);
   });
